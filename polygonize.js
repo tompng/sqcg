@@ -20,7 +20,7 @@ function funcShapeInflate(func, scale, n) {
     map[i][j] = wmap[i][j]
   })
   for (let k = 0; k < 256; k++) {
-    const A = (1 / size) ** 2
+    const A = 4 / size
     each2D(size, (i, j) => {
       if (wmap[i][j] === 0) return
       const sum = map[i - 1][j] + map[i + 1][j] + map[i][j - 1] + map[i][j + 1]
@@ -66,15 +66,6 @@ function inflatedMapToPolygon(info) {
     if (Math.min(wmap[i][j], wmap[i + 1][j], wmap[i][j + 1], wmap[i + 1][j + 1]) <= 0.5) return
     lmap[i][j] = Infinity
   })
-  each2D(size - 1, (i, j) => {
-    if (lmap[i][j] !== undefined) return
-    if (Math.max(wmap[i][j], wmap[i + 1][j], wmap[i][j + 1], wmap[i + 1][j + 1]) <= 0.5) return
-    lmap[i][j] = 0.5
-    setLevel(i - 1, j, 1)
-    setLevel(i + 1, j, 1)
-    setLevel(i, j - 1, 1)
-    setLevel(i, j + 1, 1)
-  })
   function setLevel(i, j, n) {
     if (i % n !== 0 || j % n !== 0) throw 'a'
     let outOfRange = false
@@ -111,7 +102,7 @@ function inflatedMapToPolygon(info) {
       const y = jj / n
       const v = v00 * (1 - x) * (1 - y) + v01 * x * (1 - y) + v10 * (1 - x) * y + v11 * x * y
       if (wmap[i + ii][j + jj] <= 0.5) ok = false
-      if (Math.abs(map[i + ii][j + jj] - v) > 0.01) ok = false
+      if (Math.abs(map[i + ii][j + jj] - v) > 0.02) ok = false
     })
     if (ok) {
       setLevel(i, j, n)
@@ -126,10 +117,28 @@ function inflatedMapToPolygon(info) {
   const lines = []
   function createPolygon(i, j, n) {
     if (lmap[i][j] === n) {
-      lines.push([{i, j}, {i: i+n, j}])
-      lines.push([{i: i+n, j}, {i: i+n, j: j+n}])
-      lines.push([{i: i+n, j: j+n}, {i, j: j+n}])
-      lines.push([{i, j: j+n}, {i, j}])
+      if (n == 1 || (lmap[i - n][j] >= n && lmap[i + n][j] >= n && lmap[i][j - n] >= n && lmap[i][j + n] >= n)) {
+        lines.push([{i, j}, {i: i+n, j}])
+        lines.push([{i: i+n, j}, {i: i+n, j: j+n}])
+        lines.push([{i, j}, {i: i+n, j: j+n}])
+        lines.push([{i: i+n, j: j+n}, {i, j: j+n}])
+        lines.push([{i, j: j+n}, {i, j}])
+      } else {
+        const coords = []
+        coords.push({ i, j })
+        if (lmap[i - n][j] < n) coords.push({ i, j: j + n / 2 })
+        coords.push({ i, j: j + n})
+        if (lmap[i][j + n] < n) coords.push({ i: i + n / 2, j: j + n })
+        coords.push({ i: i + n, j: j + n})
+        if (lmap[i + n][j] < n) coords.push({ i: i + n, j: j + n / 2 })
+        coords.push({ i: i + n, j})
+        if (lmap[i][j - n] < n) coords.push({ i: i + n / 2, j })
+        const c = { i: i + n / 2, j: j + n / 2 }
+        for (let k = 0; k < coords.length; k++) {
+          lines.push([c, coords[k]])
+          lines.push([coords[k], coords[(k + 1) % coords.length]])
+        }
+      }
     } else {
       if (n == 1) return
       const n2 = n / 2
@@ -140,6 +149,11 @@ function inflatedMapToPolygon(info) {
     }
   }
   checkLevel(0, 0, size - 1)
+  each2D(size - 1, (i, j) => {
+    if (lmap[i][j] !== undefined) return
+    if (Math.max(wmap[i][j], wmap[i + 1][j], wmap[i][j + 1], wmap[i + 1][j + 1]) <= 0.5) return
+    lmap[i][j] = 0.5
+  })
   createPolygon(0, 0, size - 1)
   const mdlValue = (a, b) => (0.5 - a) / (b - a)
   each2D(size, (i, j) => {
@@ -161,23 +175,29 @@ function inflatedMapToPolygon(info) {
       if (a > 0.5) push({ i: i + i1, j: j + j1 })
       if ((a > 0.5 && b <= 0.5) || (a <= 0.5 && b > 0.5)) {
         const c = mdlValue(a, b)
-        push({ i: i + i1 + c * (i2 - i1), j: j + j1 + c * (j2 - j1) })
+        push({ i: i + i1 + c * (i2 - i1), j: j + j1 + c * (j2 - j1), fixed: true })
       }
       if (b > 0.5) push({ i: i + i2, j: j + j2 })
     }
     for (let k = 0; k < coords.length; k++) {
       lines.push([coords[k], coords[(k + 1) % coords.length]])
+      if (k) lines.push([coords[0], coords[(k + 1) % coords.length]])
     }
   })
   const c=document.createElement('canvas')
-  c.width = c.height = 512
+  c.width = c.height = 1024
   const g = c.getContext('2d')
   g.beginPath()
-  g.scale(512/size, 512/size)
+  g.scale(c.width/size, c.height/size)
   lines.forEach(l => {
     const [p, q] = l
-    g.moveTo(p.i, p.j)
-    g.lineTo(q.i, q.j)
+    const s = 0
+    const pval = p.fixed ? 0 : s * map[p.i][p.j]
+    const qval = q.fixed ? 0 : s * map[q.i][q.j]
+    g.moveTo(p.i + pval, p.j - pval)
+    g.lineTo(q.i + qval, q.j - qval)
+    g.moveTo(p.i - pval, p.j + pval)
+    g.lineTo(q.i - qval, q.j + qval)
   })
   g.lineWidth = 0.1
   g.stroke()
