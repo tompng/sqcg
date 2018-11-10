@@ -31,7 +31,8 @@ function funcShapeInflate(func, scale, n) {
   each2D(size, (i, j) => {
     map[i][j] = Math.min(map[i][j], map[i][size - 1 - j])
   })
-  return { map, wmap, size }
+  const wfunc = (i, j) => func((i - n) * scale / n, (j - n) * scale / n)
+  return { map, wmap, size, wfunc }
 }
 function showMap(map) {
   const size = map.length
@@ -60,10 +61,10 @@ window.addEventListener('load', () => {
 })
 
 function inflatedMapToPolygon(info) {
-  const { map, wmap, size } = info
+  const { map, wfunc, size } = info
   const lmap = Array(size).fill().map(() => Array(size).fill())
   each2D(size - 1, (i, j) => {
-    if (Math.min(wmap[i][j], wmap[i + 1][j], wmap[i][j + 1], wmap[i + 1][j + 1]) <= 0.5) return
+    if (Math.max(wfunc(i, j), wfunc(i + 1, j), wfunc(i, j + 1), wfunc(i + 1, j + 1)) > 0) return
     lmap[i][j] = Infinity
   })
   function setLevel(i, j, n) {
@@ -101,7 +102,7 @@ function inflatedMapToPolygon(info) {
       const x = ii / n
       const y = jj / n
       const v = v00 * (1 - x) * (1 - y) + v01 * x * (1 - y) + v10 * (1 - x) * y + v11 * x * y
-      if (wmap[i + ii][j + jj] <= 0.5) ok = false
+      if (wfunc(i + ii, j + jj) > 0) ok = false
       if (Math.abs(map[i + ii][j + jj] - v) > 0.02) ok = false
     })
     if (ok) {
@@ -151,17 +152,17 @@ function inflatedMapToPolygon(info) {
   checkLevel(0, 0, size - 1)
   each2D(size - 1, (i, j) => {
     if (lmap[i][j] !== undefined) return
-    if (Math.max(wmap[i][j], wmap[i + 1][j], wmap[i][j + 1], wmap[i + 1][j + 1]) <= 0.5) return
+    if (Math.min(wfunc(i, j), wfunc(i + 1, j), wfunc(i, j + 1), wfunc(i + 1, j + 1)) > 0) return
     lmap[i][j] = 0.5
   })
   createPolygon(0, 0, size - 1)
-  const mdlValue = (a, b) => (0.5 - a) / (b - a)
+  const mdlValue = (a, b) => a / (a - b)
   each2D(size, (i, j) => {
     if (lmap[i][j] !== 0.5) return
-    const v00 = wmap[i][j]
-    const v01 = wmap[i + 1][j]
-    const v10 = wmap[i][j + 1]
-    const v11 = wmap[i + 1][j + 1]
+    const v00 = wfunc(i, j)
+    const v01 = wfunc(i + 1, j)
+    const v10 = wfunc(i, j + 1)
+    const v11 = wfunc(i + 1, j + 1)
     const coords = []
     const vs = [[v00, 0, 0], [v01, 1, 0], [v11, 1, 1], [v10, 0, 1]]
     const push = p => {
@@ -172,12 +173,12 @@ function inflatedMapToPolygon(info) {
     for (let k = 0; k < 4; k++) {
       const [a, i1, j1] = vs[k]
       const [b, i2, j2] = vs[(k + 1) % 4]
-      if (a > 0.5) push({ i: i + i1, j: j + j1 })
-      if ((a > 0.5 && b <= 0.5) || (a <= 0.5 && b > 0.5)) {
+      if (a < 0) push({ i: i + i1, j: j + j1 })
+      if ((a < 0 && b >= 0) || (a >= 0 && b < 0)) {
         const c = mdlValue(a, b)
         push({ i: i + i1 + c * (i2 - i1), j: j + j1 + c * (j2 - j1), fixed: true })
       }
-      if (b > 0.5) push({ i: i + i2, j: j + j2 })
+      if (b < 0) push({ i: i + i2, j: j + j2 })
     }
     for (let k = 0; k < coords.length; k++) {
       lines.push([coords[k], coords[(k + 1) % coords.length]])
