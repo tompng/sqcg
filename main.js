@@ -43,7 +43,7 @@ onload = () => {
 }
 
 window.addEventListener('load', () => {
-  const inflated = funcShapeInflate((x, y) => ikachanShapeFunc(x + 1 / 3, y), 1.4, 64)
+  const inflated = funcShapeInflate((x, y) => ikachanShapeFunc(x + 1 / 3, y), 1.4, 128)
   function showMap(map) {
     const size = map.length
     const c=document.createElement('canvas')
@@ -65,6 +65,21 @@ window.addEventListener('load', () => {
   }
   showMap(inflated.map)
   const triangles = inflatedMapToPolygon(inflated)
+  for (let i = triangles.length - 1; i >= 0; i--) {
+    triangles.push(triangles[i].map(p => {
+      const nz = -p.nz / 2
+      const nr = Math.sqrt(p.nx ** 2 + p.ny ** 2 + nz ** 2)
+      return {
+        x: p.x,
+        y: p.y,
+        z: -p.z / 2,
+        nx: p.nx / nr,
+        ny: p.ny / nr,
+        nz: nz / nr
+      }
+    }).reverse())
+  }
+
   const c=document.createElement('canvas')
   const size = c.width = c.height = 1024
   const g = c.getContext('2d')

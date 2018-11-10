@@ -35,7 +35,7 @@ function funcShapeInflate(func, scale, n) {
   return { map, wmap, size, wfunc, n, scale }
 }
 
-function inflatedMapToPolygon(info, zscale = 1 / 4) {
+function inflatedMapToPolygon(info, zscale = 1 / 3) {
   const { map, wfunc, size } = info
   const lmap = Array(size).fill().map(() => Array(size).fill())
   each2D(size - 1, (i, j) => {
