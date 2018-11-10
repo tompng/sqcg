@@ -54,7 +54,7 @@ function showMap(map) {
   document.body.appendChild(c)
 }
 
-const inflated = funcShapeInflate(ikachanShapeFunc, 1.6, 32)
+const inflated = funcShapeInflate(ikachanShapeFunc, 1.6, 64)
 window.addEventListener('load', () => {
   showMap(inflated.map)
   inflatedMapToPolygon(inflated)
@@ -83,6 +83,10 @@ function inflatedMapToPolygon(info) {
     })
     if (!changed) return
     const ij2 = i => Math.floor(i / 2 / n) * 2 * n
+    setLevel(ij2(i), ij2(j), n)
+    setLevel(ij2(i), ij2(j) + n, n)
+    setLevel(ij2(i) + n, ij2(j), n)
+    setLevel(ij2(i) + n, ij2(j) + n, n)
     setLevel(ij2(i - n), ij2(j), 2 * n)
     setLevel(ij2((i + n)), ij2(j), 2 * n)
     setLevel(ij2(i), ij2((j - n)), 2 * n)
@@ -103,7 +107,7 @@ function inflatedMapToPolygon(info) {
       const y = jj / n
       const v = v00 * (1 - x) * (1 - y) + v01 * x * (1 - y) + v10 * (1 - x) * y + v11 * x * y
       if (wfunc(i + ii, j + jj) > 0) ok = false
-      if (Math.abs(map[i + ii][j + jj] - v) > 0.02) ok = false
+      if (Math.abs(map[i + ii][j + jj] - v) > 0.05) ok = false
     })
     if (ok) {
       setLevel(i, j, n)
@@ -116,6 +120,7 @@ function inflatedMapToPolygon(info) {
     }
   }
   const lines = []
+  window.lmap = lmap
   function createPolygon(i, j, n) {
     if (lmap[i][j] === n) {
       if (n == 1 || (lmap[i - n][j] >= n && lmap[i + n][j] >= n && lmap[i][j - n] >= n && lmap[i][j + n] >= n)) {
