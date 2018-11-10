@@ -20,7 +20,7 @@ function funcShapeInflate(func, scale, n) {
     map[i][j] = wmap[i][j]
   })
   for (let k = 0; k < 256; k++) {
-    const A = 4 / size
+    const A = 1 / size
     each2D(size, (i, j) => {
       if (wmap[i][j] === 0) return
       const sum = map[i - 1][j] + map[i + 1][j] + map[i][j - 1] + map[i][j + 1]
@@ -35,7 +35,7 @@ function funcShapeInflate(func, scale, n) {
   return { map, wmap, size, wfunc, n, scale }
 }
 
-function inflatedMapToPolygon(info) {
+function inflatedMapToPolygon(info, zscale = 1 / 4) {
   const { map, wfunc, size } = info
   const lmap = Array(size).fill().map(() => Array(size).fill())
   each2D(size - 1, (i, j) => {
@@ -82,7 +82,7 @@ function inflatedMapToPolygon(info) {
       const y = jj / n
       const v = v00 * (1 - x) * (1 - y) + v01 * x * (1 - y) + v10 * (1 - x) * y + v11 * x * y
       if (wfunc(i + ii, j + jj) > 0) ok = false
-      if (Math.abs(map[i + ii][j + jj] - v) > 0.05) ok = false
+      if (Math.abs(map[i + ii][j + jj] - v) > 0.025) ok = false
     })
     if (ok) {
       setLevel(i, j, n)
@@ -164,9 +164,27 @@ function inflatedMapToPolygon(info) {
   })
   for (const triangle of triangles) {
     for (const p of triangle) {
-      p.z = p.fixed ? 0 : map[p.i][p.j]
       p.x = (p.i - info.n) / info.n * info.scale
       p.y = (p.j - info.n) / info.n * info.scale
+      if (p.fixed) {
+        const d = 1 / 256
+        const dx = wfunc(p.i + d, p.j) - wfunc(p.i - d, p.j)
+        const dy = wfunc(p.i, p.j + d) - wfunc(p.i, p.j - d)
+        const dr = Math.sqrt(dx ** 2 + dy ** 2)
+        p.z = 0
+        p.nx = dx / dr
+        p.ny = dy / dr
+        p.nz = 0
+      } else {
+        const dx = (map[p.i + 1][p.j] - map[p.i - 1][p.j]) * zscale
+        const dy = (map[p.i][p.j + 1] - map[p.i][p.j - 1]) * zscale
+        const dz = 2 / info.n * info.scale
+        p.z = map[p.i][p.j] * zscale
+        const dr = Math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
+        p.nx = -dx / dr
+        p.ny = -dy / dr
+        p.nz = dz / dr
+      }
     }
   }
   return triangles
