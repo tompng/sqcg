@@ -54,7 +54,7 @@ function showMap(map) {
   document.body.appendChild(c)
 }
 
-const inflated = funcShapeInflate(ikachanShapeFunc, 1.6, 64)
+const inflated = funcShapeInflate((x, y) => ikachanShapeFunc(x + 1 / 3, y), 1.4, 64)
 window.addEventListener('load', () => {
   showMap(inflated.map)
   inflatedMapToPolygon(inflated)
@@ -119,16 +119,14 @@ function inflatedMapToPolygon(info) {
       checkLevel(i + n2, j + n2, n2)
     }
   }
-  const lines = []
+  const triangles = []
   window.lmap = lmap
   function createPolygon(i, j, n) {
     if (lmap[i][j] === n) {
       if (n == 1 || (lmap[i - n][j] >= n && lmap[i + n][j] >= n && lmap[i][j - n] >= n && lmap[i][j + n] >= n)) {
-        lines.push([{i, j}, {i: i+n, j}])
-        lines.push([{i: i+n, j}, {i: i+n, j: j+n}])
-        lines.push([{i, j}, {i: i+n, j: j+n}])
-        lines.push([{i: i+n, j: j+n}, {i, j: j+n}])
-        lines.push([{i, j: j+n}, {i, j}])
+        const points = [{i, j}, {i: i+n, j}, {i: i+n, j: j+n}, {i, j: j+n}]
+        triangles.push([points[0], points[1], points[2]])
+        triangles.push([points[0], points[2], points[3]])
       } else {
         const coords = []
         coords.push({ i, j })
@@ -141,8 +139,7 @@ function inflatedMapToPolygon(info) {
         if (lmap[i][j - n] < n) coords.push({ i: i + n / 2, j })
         const c = { i: i + n / 2, j: j + n / 2 }
         for (let k = 0; k < coords.length; k++) {
-          lines.push([c, coords[k]])
-          lines.push([coords[k], coords[(k + 1) % coords.length]])
+          triangles.push([c, coords[(k + 1) % coords.length], coords[k]])
         }
       }
     } else {
@@ -185,29 +182,37 @@ function inflatedMapToPolygon(info) {
       }
       if (b < 0) push({ i: i + i2, j: j + j2 })
     }
-    for (let k = 0; k < coords.length; k++) {
-      lines.push([coords[k], coords[(k + 1) % coords.length]])
-      if (k) lines.push([coords[0], coords[(k + 1) % coords.length]])
+    const last = coords[coords.length - 1]
+    if (coords[0].i == last.i && coords[0].j == last.j) coords.shift()
+    for (let k = 0; k < coords.length - 2; k++) {
+      triangles.push([coords[k], coords[k + 1], coords[coords.length - 1]])
     }
   })
+  for (const triangle of triangles) {
+    for (const p of triangle) {
+      p.z = p.fixed ? 0 : map[p.i][p.j]
+    }
+  }
   const c=document.createElement('canvas')
   c.width = c.height = 1024
   const g = c.getContext('2d')
   g.beginPath()
   g.scale(c.width/size, c.height/size)
-  lines.forEach(l => {
-    const [p, q] = l
-    const s = 0
-    const pval = p.fixed ? 0 : s * map[p.i][p.j]
-    const qval = q.fixed ? 0 : s * map[q.i][q.j]
-    g.moveTo(p.i + pval, p.j - pval)
-    g.lineTo(q.i + qval, q.j - qval)
-    g.moveTo(p.i - pval, p.j + pval)
-    g.lineTo(q.i - qval, q.j + qval)
+  g.fillStyle = 'rgba(0, 0, 0, 0.2)'
+  g.strokeStyle = 'red'
+  g.lineWidth = 0.05
+  triangles.forEach(tri => {
+    const [a, b, c] = tri
+    g.beginPath()
+    g.moveTo(a.i, a.j)
+    g.lineTo(b.i, b.j)
+    g.lineTo(c.i, c.j)
+    g.closePath()
+    g.fill()
+    g.stroke()
   })
-  g.lineWidth = 0.1
-  g.stroke()
+
   document.body.appendChild(c)
-  console.error(lines.length)
+  console.error(triangles.length)
   return lmap
 }
