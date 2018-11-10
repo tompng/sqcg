@@ -32,33 +32,8 @@ function funcShapeInflate(func, scale, n) {
     map[i][j] = Math.min(map[i][j], map[i][size - 1 - j])
   })
   const wfunc = (i, j) => func((i - n) * scale / n, (j - n) * scale / n)
-  return { map, wmap, size, wfunc }
+  return { map, wmap, size, wfunc, n, scale }
 }
-function showMap(map) {
-  const size = map.length
-  const c=document.createElement('canvas')
-  c.width = c.height = size
-  c.style.width = size/2
-  const g = c.getContext('2d')
-  const d = g.createImageData(size, size)
-  each2D(size, (i, j) => {
-    const k = 4 * (j * size + i)
-    const v = map[i][j]
-    d.data[k+0] = v * 0xff
-    d.data[k+1] = v * 0xff
-    d.data[k+2] = v * 0xff
-    d.data[k+3] = 0xff
-  })
-  window.m=map
-  g.putImageData(d, 0, 0)
-  document.body.appendChild(c)
-}
-
-const inflated = funcShapeInflate((x, y) => ikachanShapeFunc(x + 1 / 3, y), 1.4, 64)
-window.addEventListener('load', () => {
-  showMap(inflated.map)
-  inflatedMapToPolygon(inflated)
-})
 
 function inflatedMapToPolygon(info) {
   const { map, wfunc, size } = info
@@ -120,7 +95,6 @@ function inflatedMapToPolygon(info) {
     }
   }
   const triangles = []
-  window.lmap = lmap
   function createPolygon(i, j, n) {
     if (lmap[i][j] === n) {
       if (n == 1 || (lmap[i - n][j] >= n && lmap[i + n][j] >= n && lmap[i][j - n] >= n && lmap[i][j + n] >= n)) {
@@ -191,28 +165,9 @@ function inflatedMapToPolygon(info) {
   for (const triangle of triangles) {
     for (const p of triangle) {
       p.z = p.fixed ? 0 : map[p.i][p.j]
+      p.x = (p.i - info.n) / info.n * info.scale
+      p.y = (p.j - info.n) / info.n * info.scale
     }
   }
-  const c=document.createElement('canvas')
-  c.width = c.height = 1024
-  const g = c.getContext('2d')
-  g.beginPath()
-  g.scale(c.width/size, c.height/size)
-  g.fillStyle = 'rgba(0, 0, 0, 0.2)'
-  g.strokeStyle = 'red'
-  g.lineWidth = 0.05
-  triangles.forEach(tri => {
-    const [a, b, c] = tri
-    g.beginPath()
-    g.moveTo(a.i, a.j)
-    g.lineTo(b.i, b.j)
-    g.lineTo(c.i, c.j)
-    g.closePath()
-    g.fill()
-    g.stroke()
-  })
-
-  document.body.appendChild(c)
-  console.error(triangles.length)
-  return lmap
+  return triangles
 }
