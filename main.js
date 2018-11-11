@@ -42,8 +42,9 @@ onload = () => {
   }
 }
 
+const inflated = funcShapeInflate((x, y) => ikachanShapeFunc(x + 1 / 3, y), 1.4, 64)
+const triangles = inflatedMapToPolygon(inflated)
 window.addEventListener('load', () => {
-  const inflated = funcShapeInflate((x, y) => ikachanShapeFunc(x + 1 / 3, y), 1.4, 128)
   function showMap(map) {
     const size = map.length
     const c=document.createElement('canvas')
@@ -64,7 +65,6 @@ window.addEventListener('load', () => {
     document.body.appendChild(c)
   }
   showMap(inflated.map)
-  const triangles = inflatedMapToPolygon(inflated)
   for (let i = triangles.length - 1; i >= 0; i--) {
     triangles.push(triangles[i].map(p => {
       const nz = -p.nz / 2
@@ -102,4 +102,39 @@ window.addEventListener('load', () => {
 
   document.body.appendChild(c)
   console.error(triangles.length)
+
+  const renderer = new THREE.WebGLRenderer()
+  document.body.appendChild(renderer.domElement)
+  renderer.domElement.style.boxShadow = '0 0 1px black'
+  const width = 800
+  const height = 600
+  renderer.setSize(width, height)
+  renderer.setPixelRatio(window.devicePixelRatio)
+  const scene = new THREE.Scene()
+  const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
+  camera.position.set(0, 0, 4)
+  const geometry = new THREE.BufferGeometry()
+  const vertices = []
+  const normals = []
+  for (const triangle of triangles) {
+    for (const p of triangle) {
+      vertices.push(p.x, p.y, p.z)
+      normals.push(p.nx, p.ny, p.nz)
+    }
+  }
+  geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3))
+  geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3))
+  const material = new THREE.MeshPhongMaterial()
+  const box = new THREE.Mesh(geometry, material)
+  const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
+  directionalLight.position.set(1, 1, 1)
+  scene.add(box)
+  scene.add(directionalLight)
+  function animate() {
+    box.rotation.y += 0.01
+    box.rotation.x += 0.005
+    renderer.render(scene, camera)
+    requestAnimationFrame(animate)
+  }
+  animate()
 })
