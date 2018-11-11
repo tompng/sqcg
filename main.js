@@ -115,24 +115,40 @@ window.addEventListener('load', () => {
   camera.position.set(0, 0, 4)
   const geometry = new THREE.BufferGeometry()
   const vertices = []
+  const indices = []
   const normals = []
+  const indicesMap = {}
   for (const triangle of triangles) {
     for (const p of triangle) {
-      vertices.push(p.x, p.y, p.z)
-      normals.push(p.nx, p.ny, p.nz)
+      const key = [p.x, p.y, p.z]
+      let index = indicesMap[key]
+      if (index === undefined) {
+        index = vertices.length / 3
+        indicesMap[key] = index
+        vertices.push(p.x, p.y, p.z)
+        normals.push(p.nx, p.ny, p.nz)
+      }
+      indices.push(index)
     }
   }
+  // return
   geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3))
+  geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1))
   geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3))
+  // geometry.computeFaceNormals()
+  // geometry.computeVertexNormals()
   const material = new THREE.MeshPhongMaterial()
+  // const material = new THREE.MeshStandardMaterial()
   const box = new THREE.Mesh(geometry, material)
   const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
-  directionalLight.position.set(1, 1, 1)
+  directionalLight.position.set(1, 2, 3)
   scene.add(box)
   scene.add(directionalLight)
   function animate() {
     box.rotation.y += 0.01
     box.rotation.x += 0.005
+    // box.rotation.y = 1.2
+    // box.rotation.x = 0.5
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
   }

@@ -12,19 +12,29 @@ function funcShapeInflate(func, scale, n) {
   each2D(size, (i, j) => {
     const x = (i - n) * scale / n
     const y = (j - n) * scale / n
-    const d = scale / n / 2
-    const vs = [func(x-d,y-d), func(x-d,y+d), func(x+d,y-d), func(x+d,y+d)]
-    let minus = 0, plus = 0
-    for (const v of vs) v < 0 ? minus -= v : plus += v
-    wmap[i][j] = minus / (minus + plus)
-    map[i][j] = wmap[i][j]
+    const v = func(x, y)
+    wmap[i][j] = v
+    map[i][j] = v < 0 ? 1 : 0
   })
-  for (let k = 0; k < 256; k++) {
-    const A = 1 / size
+  for (let k = 0; k < 512; k++) {
+    const A = 4 / size
+    const wat = (i, j, v) => {
+      const v2 = wmap[i][j]
+      return v2 < 0 ? 1 : v / (v - v2)
+    }
     each2D(size, (i, j) => {
-      if (wmap[i][j] === 0) return
-      const sum = map[i - 1][j] + map[i + 1][j] + map[i][j - 1] + map[i][j + 1]
-      map[i][j] = (sum + A) / (A + 4) * wmap[i][j]
+      const v = wmap[i][j]
+      if (v >= 0) return
+      let wsum = 0, sum = 0, w, wp, wm
+      wp = wat(i + 1, j, v)
+      wm = wat(i - 1, j, v)
+      wsum += 1 / wm + 1 / wp
+      sum += ((wp === 1 ? map[i + 1][j] : 0) / wp + (wm === 1 ? map[i - 1][j] : 0) / wm) / (wp + wm)
+      wp = wat(i, j + 1, v)
+      wm = wat(i, j - 1, v)
+      wsum += 1 / wm + 1 / wp
+      sum += ((wp === 1 ? map[i][j + 1] : 0) / wp + (wm === 1 ? map[i][j - 1] : 0) / wm) / (wp + wm)
+      map[i][j] = (2 * sum + A) / (A + wsum)
     })
   }
   each2D(size, (i, j) => { map[i][j] = Math.sqrt(map[i][j]) })
@@ -82,7 +92,7 @@ function inflatedMapToPolygon(info, zscale = 1 / 3) {
       const y = jj / n
       const v = v00 * (1 - x) * (1 - y) + v01 * x * (1 - y) + v10 * (1 - x) * y + v11 * x * y
       if (wfunc(i + ii, j + jj) > 0) ok = false
-      if (Math.abs(map[i + ii][j + jj] - v) > 0.025) ok = false
+      if (Math.abs(map[i + ii][j + jj] - v) > 0.025*0+0.01) ok = false
     })
     if (ok) {
       setLevel(i, j, n)
@@ -167,7 +177,7 @@ function inflatedMapToPolygon(info, zscale = 1 / 3) {
       p.x = (p.i - info.n) / info.n * info.scale
       p.y = (p.j - info.n) / info.n * info.scale
       if (p.fixed) {
-        const d = 1 / 256
+        const d = 1 / 256 / 1000
         const dx = wfunc(p.i + d, p.j) - wfunc(p.i - d, p.j)
         const dy = wfunc(p.i, p.j + d) - wfunc(p.i, p.j - d)
         const dr = Math.sqrt(dx ** 2 + dy ** 2)
@@ -176,9 +186,24 @@ function inflatedMapToPolygon(info, zscale = 1 / 3) {
         p.ny = dy / dr
         p.nz = 0
       } else {
-        const dx = (map[p.i + 1][p.j] - map[p.i - 1][p.j]) * zscale
-        const dy = (map[p.i][p.j + 1] - map[p.i][p.j - 1]) * zscale
-        const dz = 2 / info.n * info.scale
+        let wp, wm
+        const f = wfunc(p.i, p.j)
+        const v = map[p.i][p.j]
+        const wat = (i, j) => {
+          const f2 = wfunc(i, j)
+          return f2 < 0 ? 1 : f / (f - f2)
+        }
+        wp = wat(p.i + 1, p.j)
+        wm = wat(p.i - 1, p.j)
+        const dxp = ((wp === 1 ? map[p.i + 1][p.j] ** 2 : 0) - v ** 2) / wp
+        const dxm = (v ** 2 - (wm === 1 ? map[p.i - 1][p.j] ** 2 : 0)) / wm
+        const dx = (dxp + dxm) / 2 * zscale / v
+        wp = wat(p.i, p.j + 1)
+        wm = wat(p.i, p.j - 1)
+        const dyp = ((wp === 1 ? map[p.i][p.j + 1] ** 2 : 0) - v ** 2) / wp
+        const dym = (v ** 2 - (wm === 1 ? map[p.i][p.j - 1] ** 2 : 0)) / wm
+        const dy = (dyp + dym) / 2 * zscale / v
+        const dz = 1 / info.n * info.scale
         p.z = map[p.i][p.j] * zscale
         const dr = Math.sqrt(dx ** 2 + dy ** 2 + dz ** 2)
         p.nx = -dx / dr
