@@ -223,3 +223,86 @@ function inflatedMapToPolygon(info, zscale = 1 / 3) {
   }
   return triangles
 }
+
+function coordsToPolygon(coords) {
+  const vdiff = (a, b) => ({ x: b.x - a.x, y: b.y - a.y })
+  const normalize = a => {
+    const r = Math.sqrt(a.x ** 2 + a.y ** 2)
+    return { x: a.x / r, y: a.y / r }
+  }
+  const backCoords = (l, z, nz) => coords.map((p, i) => {
+    const pa = coords[(i - 1 + coords.length) % coords.length]
+    const pb = coords[(i + 1) % coords.length]
+    const d = normalize(vdiff(pa, pb))
+    const nx = d.y
+    const ny = -d.x
+    const nr = Math.sqrt(1 - nz * nz)
+    return { x: p.x - l * nx, y: p.y - l * ny, z, nx: nx * nr, ny: ny * nr, nz }
+  })
+  const n = 10
+  const R = 0.1
+  let coordsPrev = backCoords(0, 0, 0)
+  const triangles = []
+  for(let i = 1; i <= n; i++) {
+    const th = Math.PI / 2 * i / n
+    const back = R * (1 - Math.cos(th))
+    const nz = Math.sin(th)
+    const z = R * nz
+    const coordsNext = backCoords(back, z, nz)
+    for (let i = 0; i < coords.length; i++) {
+      const j = (i + 1) % coords.length
+      triangles.push([coordsPrev[i], coordsPrev[j], coordsNext[j]])
+      triangles.push([coordsPrev[i], coordsNext[j], coordsNext[i]])
+    }
+    coordsPrev = coordsNext
+  }
+  for (let i = 0; i < coords.length; i++) {
+    const z = coordsPrev[0].z
+    const c = { x: 0, y: 0, z, nx: 0, ny: 0, nz: 1}
+    const j = (i + 1) % coords.length
+    triangles.push([c, coordsPrev[i], coordsPrev[j]])
+  }
+  return triangles
+}
+
+
+function coordsToPolygon(coords) {
+  const vdiff = (a, b) => ({ x: b.x - a.x, y: b.y - a.y })
+  const normalize = a => {
+    const r = Math.sqrt(a.x ** 2 + a.y ** 2)
+    return { x: a.x / r, y: a.y / r }
+  }
+  const backCoords = (l, z, nz) => coords.map((p, i) => {
+    const pa = coords[(i - 1 + coords.length) % coords.length]
+    const pb = coords[(i + 1) % coords.length]
+    const d = normalize(vdiff(pa, pb))
+    const nx = d.y
+    const ny = -d.x
+    const nr = Math.sqrt(1 - nz * nz)
+    return { x: p.x - l * nx, y: p.y - l * ny, z, nx: nx * nr, ny: ny * nr, nz }
+  })
+  const n = 10
+  const R = 0.12
+  let coordsPrev = backCoords(0, 0, 0)
+  const triangles = []
+  for(let i = 1; i <= n; i++) {
+    const th = Math.PI / 2 * i / n
+    const back = R * (1 - Math.cos(th))
+    const nz = Math.sin(th)
+    const z = R * nz
+    const coordsNext = backCoords(back, z, nz)
+    for (let i = 0; i < coords.length; i++) {
+      const j = (i + 1) % coords.length
+      triangles.push([coordsPrev[i], coordsPrev[j], coordsNext[j]])
+      triangles.push([coordsPrev[i], coordsNext[j], coordsNext[i]])
+    }
+    coordsPrev = coordsNext
+  }
+  for (let i = 0; i < coords.length; i++) {
+    const z = coordsPrev[0].z
+    const c = { x: 0, y: 0, z, nx: 0, ny: 0, nz: 1}
+    const j = (i + 1) % coords.length
+    triangles.push([c, coordsPrev[i], coordsPrev[j]])
+  }
+  return triangles
+}

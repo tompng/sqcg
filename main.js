@@ -43,7 +43,8 @@ onload = () => {
 }
 
 const inflated = funcShapeInflate((x, y) => ikachanShapeFunc(x + 1 / 3, y), 1.4, 64)
-const triangles = inflatedMapToPolygon(inflated)
+// const triangles = inflatedMapToPolygon(inflated)
+triangles = coordsToPolygon(ikachanCoords(128))
 window.addEventListener('load', () => {
   function showMap(map) {
     const size = map.length
