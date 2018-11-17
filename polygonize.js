@@ -1,5 +1,5 @@
 function coordsShrink3D() {
-  const coords = ikachanCoords()
+  const coords = ikachanCoords(128)
   function coordsMap(coords, f) {
     return coords.map((p, i) => {
       const a = coords[(i + coords.length - 1) % coords.length]
@@ -57,8 +57,8 @@ function coordsShrink3D() {
     const sh = 0.1 * (i + 1) / 16
     const coordsWas = tmpcoords
     tmpcoords = shrinkCoords(tmpcoords, sh)
-    tmpcoords = replotCoords(tmpcoords, 0.06)
-    tmpcoords = smooth(tmpcoords, i / 2)
+    tmpcoords = replotCoords(tmpcoords, 0.04)
+    tmpcoords = smooth(tmpcoords, i)
     fill(coordsWas, tmpcoords, zfunc(i), zfunc(i + 1))
   }
   const center = { x: 0, y: 0 }
