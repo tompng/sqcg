@@ -266,6 +266,66 @@ function coordsToPolygon(coords) {
 }
 
 
+function funcToPolygon(func) {
+  const N = 128
+  const original = func
+  func = (x, y) => {
+    const f = 5/2+Math.pow(6/5-Math.cos(15*y), 1/4)
+    const g = 5+Math.pow(5*y*(1+x/3)/3,16)
+    const h = 1+Math.exp(4*x)
+    const a = 6-3*y-3*x
+    const b = 6+3*y-3*x
+    const f2 = 2
+    let v = Math.exp(-a)+Math.exp(-b)+Math.exp(-x-1/2-6*f/g/h/5)-2/3
+    let v2 = Math.exp(-a)+Math.exp(-b)+Math.exp(-x-1/2-6*f2/g/h/5)-2/3
+    v = (Math.exp(32*v) - 1)/32
+    return v / (1 + v2 / 2)
+    // return v
+    return v / (1 + (x-0.3) ** 2 / 2 + y ** 2)
+    // return v * Math.exp(-4 * v2)
+    // return v / (1 + (x-0.3)**2 / 2 + y ** 2) * Math.exp(-4 * v2)
+    // return (f < -0.1 ? -0.1 : f) / (1 + 4*(x-0.5)**2 + 4*y*y)
+  }
+  let coords = funcToCoords(func, N, 0, 4)
+  coords.forEach(p => p.z = 0)
+  const triangles = []
+  const m = 64
+  const z0 = 1
+  for (let i = 1; i < m; i++) {
+    const th = Math.PI * i / m / 2
+    const zt = 1 - Math.cos(th)
+    const z = Math.sin(th)*0+th
+    const coords2 = funcToCoords(func, Math.round(N / 4 + N * (m - i) / m), -zt * 0.4, 4)
+    coords2.forEach(p => p.z = z0 * z)
+    let j = -1, k = -1
+    while (true) {
+      const a = coords[j < 0 ? coords.length - 1 : j]
+      const b = coords2[k < 0 ? coords2.length - 1 : k]
+      if (j / coords.length < k / coords2.length) {
+        j++
+        const c = coords[j]
+        if (!c) break
+        triangles.push([a, c, b])
+      } else {
+        k++
+        const c = coords2[k]
+        if (!c) break
+        triangles.push([a, c, b])
+      }
+    }
+    coords.length
+
+    coords = coords2
+  }
+  const vdist2 = (a, b) => (b.x - a.x) ** 2 +(b.y - a.y) ** 2
+  for (let i = 0; i < coords.length; i++) {
+    const c = { x: coords[0].x, y: coords[0].y, z: coords[0].z}
+    const j = (i + 1) % coords.length
+    triangles.push([c, coords[i], coords[j]])
+  }
+  return triangles
+}
+
 function coordsToPolygon(coords) {
   const vdiff = (a, b) => ({ x: b.x - a.x, y: b.y - a.y })
   const normalize = a => {

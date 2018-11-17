@@ -44,7 +44,7 @@ onload = () => {
 
 const inflated = funcShapeInflate((x, y) => ikachanShapeFunc(x + 1 / 3, y), 1.4, 64)
 // const triangles = inflatedMapToPolygon(inflated)
-triangles = coordsToPolygon(ikachanCoords(128))
+triangles = funcToPolygon(ikachanShapeFunc)
 window.addEventListener('load', () => {
   function showMap(map) {
     const size = map.length
@@ -135,9 +135,8 @@ window.addEventListener('load', () => {
   // return
   geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3))
   geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1))
-  geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3))
-  // geometry.computeFaceNormals()
-  // geometry.computeVertexNormals()
+  // geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3))
+  geometry.computeVertexNormals()
   const material = new THREE.MeshPhongMaterial()
   // const material = new THREE.MeshStandardMaterial()
   const box = new THREE.Mesh(geometry, material)

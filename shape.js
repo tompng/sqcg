@@ -73,6 +73,9 @@ function ikachanShapeFunc(x, y) {
   return Math.exp(-a)+Math.exp(-b)+Math.exp(-x-1/2-6*f/g/h/5)-2/3
 }
 function ikachanCoords(n = 64) {
+  return funcToCoords(ikachanShapeFunc, n, 0)
+}
+function funcToCoords(f, n, z, m =  0x100) {
   const bs = f => {
     let a = 0, b = 4
     for (let i = 0; i < 32; i++) {
@@ -84,10 +87,10 @@ function ikachanCoords(n = 64) {
   const at = t => {
     const c = Math.cos(t)
     const s = Math.sin(t)
-    const r = bs(r => ikachanShapeFunc(1 + r * c, r * s) < 0)
+    const r = bs(r => f(1 + r * c, r * s) < z)
     return { x: 1 + r * c, y: r * s}
   }
-  const num = n * 0x100
+  const num = n * m
   const a = 0
   const points = []
   for (let i = 0; i <= num; i++) {
