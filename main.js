@@ -7,11 +7,55 @@ onload = () => {
   ctx.save()
   ctx.translate(size / 2, size / 2)
   ctx.scale(size / 4, size / 4)
+  ctx.lineWidth = 0.01
   ctx.beginPath()
   ctx.curve(ikachanCoords(), true)
-  ctx.lineWidth = 0.01
-  ctx.translate(0.15,0)
   ctx.stroke()
+
+  function coordsMap(coords, f) {
+    return coords.map((p, i) => {
+      const a = coords[(i + coords.length - 1) % coords.length]
+      const b = coords[(i + 1) % coords.length]
+      return f(a, p, b)
+    })
+  }
+
+
+  const coords = ikachanCoords()
+  function shrinkCoords(coords, l){
+    return coordsMap(coords, (a, p, b) => {
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const dr = Math.sqrt(dx ** 2 + dy ** 2)
+      return {
+        x: p.x - l * dy / dr,
+        y: p.y + l * dx / dr
+      }
+    })
+  }
+  function smooth(coords, pow) {
+    for (let i = 0; i < pow; i++) {
+      const c = Math.min(1, pow - i) / 2
+      const s = 1 / (1 + 2 * c)
+      coords = coordsMap(coords, (a, p, b) => {
+        return { x: (p.x + c * (a.x + b.x)) * s, y: (p.y + c * (a.y + b.y)) * s }
+      })
+    }
+    return coords
+  }
+  for(let tmpcoords = coords, i = 0; i < 18; i++) {
+    console.error(tmpcoords.length)
+    const sh = 0.1 * (i + 1) ** 2 / 256
+    tmpcoords = shrinkCoords(tmpcoords, sh)
+    tmpcoords = replotCoords(tmpcoords, 0.06)
+    tmpcoords = smooth(tmpcoords, i < 6 ? 0 : (i - 6))
+    ctx.beginPath()
+    ctx.curve(tmpcoords, true)
+    ctx.stroke()
+  }
+
+  ctx.globalAlpha = 0.2
+  ctx.translate(0.15,0)
   ctx.beginPath()
   ctx.curve([
     {x:0.34,y:0},

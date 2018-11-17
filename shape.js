@@ -7,7 +7,7 @@ CanvasRenderingContext2D.prototype.line = function(points, closed, noMove) {
     this.lineTo(points[j].x, points[j].y)
   }
 }
-CanvasRenderingContext2D.prototype.curve = function(points, closed, noMove) {
+function coordsToBezierParams(points, closed) {
   const dfunc = array => {
     const out = array.map(v => { return { v, d: 0 } })
     for (let n = 0; n < 4; n++) {
@@ -24,17 +24,27 @@ CanvasRenderingContext2D.prototype.curve = function(points, closed, noMove) {
   }
   const xs = dfunc(points.map(p => p.x))
   const ys = dfunc(points.map(p => p.y))
-  if (!noMove) this.moveTo(xs[0].v, ys[0].v)
+  const out = []
   const len = closed ? points.length : points.length - 1
   for (let i  = 0; i < len; i++) {
     const s = 1 / 3
     const j = (i + 1) % points.length
-    this.bezierCurveTo(
+    out.push([
+      xs[i].v, ys[i].v,
       xs[i].v + s * xs[i].d, ys[i].v + s * ys[i].d,
       xs[j].v - s * xs[j].d, ys[j].v - s * ys[j].d,
       xs[j].v, ys[j].v
-    )
+    ])
   }
+  return out
+}
+CanvasRenderingContext2D.prototype.curve = function(points, closed, noMove) {
+  const beziers = coordsToBezierParams(points, closed)
+  beziers.forEach((b, i) => {
+    const [ax, ay, bx, by, cx, cy, dx, dy] = b
+    if (!noMove && i === 0) this.moveTo(ax, ay)
+    this.bezierCurveTo(bx, by, cx, cy, dx, dy)
+  })
 }
 function ikachanCoords2(){
   const ikaCoords = [
@@ -74,6 +84,50 @@ function ikachanShapeFunc(x, y) {
 }
 function ikachanCoords(n = 64) {
   return funcToCoords(ikachanShapeFunc, n, 0)
+}
+function replotCoords(coords, delta) {
+  const params = coordsToBezierParams(coords, true)
+  const step = 10
+  const points = [{ x: params[0][0], y: params[0][1] }]
+  for (const bez of params) {
+    const [ax, ay, bx, by, cx, cy, dx, dy] = bez
+    for (let j = 1; j <= step; j++) {
+      const t = j / step
+      const a = (1 - t) ** 3
+      const b = 3 * t * (1 - t) ** 2
+      const c = 3 * t ** 2 * (1 - t)
+      const d = t ** 3
+      points.push({
+        x: a * ax + b * bx + c * cx + d * dx,
+        y: a * ay + b * by + c * cy + d * dy
+      })
+    }
+  }
+  // points.splice(points.length / 2)
+  const eachLen = f => {
+    for (let i = 0; i < points.length - 1; i++) {
+      const p = points[i], q = points[i + 1]
+      const l = Math.sqrt((q.x - p.x) ** 2 + (q.y - p.y) ** 2)
+      f(q, l)
+    }
+  }
+  let length = 0
+  eachLen((p, l) => length += l)
+  const output = [points[0]]
+  const n = Math.round(length / delta)
+  let lastLen = 0
+  eachLen((p, l) => {
+    const i = Math.floor(lastLen / length * n)
+    lastLen += l
+    if (Math.floor(lastLen / length * n) > i) {
+      output.push(p)
+    }
+  })
+  // for (let i = output.length - 2; i > 0; i--) {
+  //   const p = output[i]
+  //   output.push({ x: p.x, y: -p.y })
+  // }
+  return output
 }
 function funcToCoords(f, n, z, m =  0x100) {
   const bs = f => {
