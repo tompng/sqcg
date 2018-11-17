@@ -54,7 +54,7 @@ onload = () => {
     ctx.stroke()
   }
 
-  ctx.globalAlpha = 0.2
+  ctx.globalAlpha = 0.6
   ctx.translate(0.15,0)
   ctx.beginPath()
   ctx.curve([
@@ -86,9 +86,10 @@ onload = () => {
   }
 }
 
-const inflated = funcShapeInflate((x, y) => ikachanShapeFunc(x + 1 / 3, y), 1.4, 64)
+// const inflated = funcShapeInflate((x, y) => ikachanShapeFunc(x + 1 / 3, y), 1.4, 64)
 // const triangles = inflatedMapToPolygon(inflated)
-triangles = funcToPolygon(ikachanShapeFunc)
+// triangles = funcToPolygon(ikachanShapeFunc)
+triangles = coordsShrink3D()
 window.addEventListener('load', () => {
   function showMap(map) {
     const size = map.length
@@ -109,7 +110,7 @@ window.addEventListener('load', () => {
     g.putImageData(d, 0, 0)
     document.body.appendChild(c)
   }
-  showMap(inflated.map)
+  // showMap(inflated.map)
   for (let i = triangles.length - 1; i >= 0; i--) {
     triangles.push(triangles[i].map(p => {
       const nz = -p.nz / 2
