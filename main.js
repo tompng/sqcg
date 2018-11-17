@@ -90,10 +90,9 @@ window.addEventListener('load', () => {
   }
   const geometry = new THREE.BufferGeometry()
   geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3))
-  // geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3))
+  geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3))
   geometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2))
   geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1))
-  geometry.computeVertexNormals()
   const texcanvas = document.createElement('canvas')
   texcanvas.width = texcanvas.height = 256
   const texctx = texcanvas.getContext('2d')

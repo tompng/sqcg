@@ -35,14 +35,15 @@ function coordsShrink3D() {
     while (coords1[i + 1] || coords2[j + 1]) {
       const pi = coords1[i < 0 ? coords1.length - 1 : i]
       const pj = coords2[j < 0 ? coords2.length - 1 : j]
-      if (!pi || !pj) throw 'a'
       if (i / coords1.length < j / coords2.length) {
         const pi2 = coords1[++i]
         if (!pi2) return
+        if (pi.x === pi2.x && pi.y === pi2.y) continue
         triangles.push([{ ...pj, z: z2 }, { ...pi, z: z1 }, { ...pi2, z: z1 }])
       } else {
         const pj2 = coords2[++j]
         if (!pj2) return
+        if (pj.x === pj2.x && pj.y === pj2.y) continue
         triangles.push([{ ...pj, z: z2 }, { ...pi, z: z1 }, { ...pj2, z: z2 }])
       }
     }
@@ -78,12 +79,38 @@ function coordsShrink3D() {
       return {
         x: p.x,
         y: p.y,
-        z: Math.atan(-8 * p.z) / 8,
-        nx: p.nx / nr,
-        ny: p.ny / nr,
-        nz: nz / nr
+        z: Math.atan(-8 * p.z) / 8
       }
     }).reverse())
+  }
+  const pointNormals = {}
+  for (const tri of triangles) {
+    const [a, b, c] = tri
+    const va = { x: c.x - a.x, y: c.y - a.y, z: c.z - a.z }
+    const vb = { x: c.x - b.x, y: c.y - b.y, z: c.z - b.z }
+    const ra = Math.sqrt(va.x ** 2 + va.y ** 2 + va.z ** 2)
+    const rb = Math.sqrt(vb.x ** 2 + vb.y ** 2 + vb.z ** 2)
+    const dot = va.x * vb.x + va.y * vb.y + va.z * vb.z
+    const s = ra * rb * Math.sin(Math.acos(dot / ra / rb))
+    const nx = va.y * vb.z - va.z * vb.y
+    const ny = va.z * vb.x - va.x * vb.z
+    const nz = va.x * vb.y - va.y * vb.x
+    for (const p of tri) {
+      const key = [p.x, p.y, p.z]
+      const norm = pointNormals[key] = pointNormals[key] || { x: 0, y: 0, z: 0 }
+      norm.x += s * nx
+      norm.y += s * ny
+      norm.z += s * nz
+    }
+  }
+  for (const tri of triangles) {
+    for (const p of tri) {
+      const norm = pointNormals[[p.x, p.y, p.z]]
+      const nr = Math.sqrt(norm.x ** 2 + norm.y ** 2 + norm.z ** 2)
+      p.nx = norm.x / nr
+      p.ny = norm.y / nr
+      p.nz = norm.z / nr
+    }
   }
   return triangles
 }

@@ -58,7 +58,7 @@ function ikachanShapeFunc(x, y) {
 function ikachanCoords(n = 64) {
   return funcToCoords(ikachanShapeFunc, n, 0)
 }
-function replotCoords(coords, delta) {
+function replotCoords(coords, delta, closed) {
   const params = coordsToBezierParams(coords, true)
   const step = 10
   const points = [{ x: params[0][0], y: params[0][1] }]
@@ -76,7 +76,7 @@ function replotCoords(coords, delta) {
       })
     }
   }
-  // points.splice(points.length / 2)
+  points.splice(points.length / 2)
   const eachLen = f => {
     for (let i = 0; i < points.length - 1; i++) {
       const p = points[i], q = points[i + 1]
@@ -96,10 +96,10 @@ function replotCoords(coords, delta) {
       output.push(p)
     }
   })
-  // for (let i = output.length - 2; i > 0; i--) {
-  //   const p = output[i]
-  //   output.push({ x: p.x, y: -p.y })
-  // }
+  for (let i = output.length - 2; i > 0; i--) {
+    const p = output[i]
+    output.push({ x: p.x, y: -p.y })
+  }
   return output
 }
 function funcToCoords(f, n, z, m =  0x100) {
