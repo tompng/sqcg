@@ -46,49 +46,6 @@ onload = () => {
   ctx.beginPath()
   ctx.curve(ikachanCoords(), true)
   ctx.stroke()
-
-  function coordsMap(coords, f) {
-    return coords.map((p, i) => {
-      const a = coords[(i + coords.length - 1) % coords.length]
-      const b = coords[(i + 1) % coords.length]
-      return f(a, p, b)
-    })
-  }
-
-  const coords = ikachanCoords()
-  function shrinkCoords(coords, l){
-    return coordsMap(coords, (a, p, b) => {
-      const dx = b.x - a.x
-      const dy = b.y - a.y
-      const dr = Math.sqrt(dx ** 2 + dy ** 2)
-      return {
-        x: p.x - l * dy / dr,
-        y: p.y + l * dx / dr
-      }
-    })
-  }
-  function smooth(coords, pow) {
-    for (let i = 0; i < pow; i++) {
-      const c = Math.min(1, pow - i) / 2
-      const s = 1 / (1 + 2 * c)
-      coords = coordsMap(coords, (a, p, b) => {
-        return { x: (p.x + c * (a.x + b.x)) * s, y: (p.y + c * (a.y + b.y)) * s }
-      })
-    }
-    return coords
-  }
-  for(let tmpcoords = coords, i = 0; i < 18; i++) {
-    console.error(tmpcoords.length)
-    const sh = 0.1 * (i + 1) ** 2 / 256
-    tmpcoords = shrinkCoords(tmpcoords, sh)
-    tmpcoords = replotCoords(tmpcoords, 0.06)
-    tmpcoords = smooth(tmpcoords, i < 6 ? 0 : (i - 6))
-    ctx.beginPath()
-    ctx.curve(tmpcoords, true)
-    ctx.stroke()
-  }
-
-  ctx.globalAlpha = 0.6
   sqDrawEyes(ctx)
 }
 
@@ -114,7 +71,6 @@ window.addEventListener('load', () => {
     g.putImageData(d, 0, 0)
     document.body.appendChild(c)
   }
-  // showMap(inflated.map)
   for (let i = triangles.length - 1; i >= 0; i--) {
     triangles.push(triangles[i].map(p => {
       const nz = -p.nz / 2
@@ -210,8 +166,6 @@ window.addEventListener('load', () => {
   function animate() {
     box.rotation.y += 0.01
     box.rotation.x += 0.005
-    // box.rotation.y = 1.2
-    // box.rotation.x = 0.5
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
   }
