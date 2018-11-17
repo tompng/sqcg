@@ -114,3 +114,54 @@ function coordsShrink3D() {
   }
   return triangles
 }
+
+function trimTriangles(triangles, xrange, yrange) {
+  const [xmin, xmax] = xrange
+  const [ymin, ymax] = yrange
+  const out = []
+  function interpolate2(a, b, t) {
+    const x = a.x + (b.x - a.x) * t
+    const y = a.y + (b.y - a.y) * t
+    const z = a.z + (b.z - a.z) * t
+    let nx = a.nx + (b.nx - a.nx) * t
+    let ny = a.ny + (b.ny - a.ny) * t
+    let nz = a.nz + (b.nz - a.nz) * t
+    const nr = Math.sqrt(nx ** 2 + ny ** 2 + nz ** 2)
+    nx /= nr
+    ny /= nr
+    nz /= nr
+    return { x, y, z, nx, ny, nz }
+  }
+  function tinclude(x, y, xth, yth) {
+    if (xth != null) {
+      return xth === xmin ? xmin <= x : x <= xmax
+    } else {
+      return yth === ymin ? ymin <= y : y <= ymax
+    }
+  }
+  for (const tri of triangles) {
+    let coords = tri
+    for (cut of [[xmin, null], [xmax, null], [null, ymin], [null, ymax]]) {
+      const [xth, yth] = cut
+      const coords2 = []
+      for (let i = 0; i < coords.length; i++) {
+        const p = coords[i]
+        const q = coords[(i + 1) % coords.length]
+        const tp = tinclude(p.x, p.y, xth, yth)
+        const tq = tinclude(q.x, q.y, xth, yth)
+        if (!tp && !tq) continue
+        if (tp) {
+          coords2.push(p)
+          if (tq) continue
+        }
+        const t = xth != null ? (xth - p.x) / (q.x - p.x) : (yth - p.y) / (q.y - p.y)
+        coords2.push(interpolate2(p, q, t))
+      }
+      coords = coords2
+    }
+    for (let i = 1; i < coords.length - 1; i++) {
+      out.push([coords[0], coords[i], coords[i + 1]])
+    }
+  }
+  return out
+}

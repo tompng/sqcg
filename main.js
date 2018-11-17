@@ -14,7 +14,53 @@ onload = () => {
   sqDrawEyes(ctx)
 }
 
-const triangles = coordsShrink3D()
+const ikaTriangles = coordsShrink3D()
+const subTriangles = []
+const subTriStep = 4
+for (let i = -subTriStep; i < subTriStep; i++) {
+  for (let j = -subTriStep; j < subTriStep; j++) {
+    const xmin = i / 4
+    const xrange = [i / subTriStep * 1.3 + 0.3, (i + 1) * 1.3 / subTriStep + 0.3]
+    const yrange = [j / subTriStep * 1.3, (j + 1) / subTriStep * 1.3]
+    const tris = trimTriangles(ikaTriangles, xrange, yrange)
+    if (tris.length) subTriangles.push(tris)
+  }
+}
+
+function geometryFromTriangle(triangles) {
+  const vertices = []
+  const indices = []
+  const normals = []
+  const uvs = []
+  const indicesMap = {}
+  const p0 = triangles[0][0]
+  const r0 = Math.sqrt(p0.x ** 2 + p0.y ** 2)
+  for (const triangle of triangles) {
+    for (const p of triangle) {
+      const key = [p.x, p.y, p.z]
+      let index = indicesMap[key]
+      if (index === undefined) {
+        index = vertices.length / 3
+        indicesMap[key] = index
+        if (p.z < 0) {
+          uvs.push((p0.x / r0 + 1) / 2, (p0.y / r0 + 1) / 2)
+        } else {
+          uvs.push((p.x + 1) / 2, (p.y + 1) / 2)
+        }
+        vertices.push(p.x, p.y, p.z)
+        normals.push(p.nx, p.ny, p.nz)
+      }
+      indices.push(index)
+    }
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3))
+  geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3))
+  geometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2))
+  geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1))
+  return geometry
+}
+
 window.addEventListener('load', () => {
   function showMap(map) {
     const size = map.length
@@ -45,19 +91,20 @@ window.addEventListener('load', () => {
   g.fillStyle = 'rgba(0, 0, 0, 0.2)'
   g.strokeStyle = 'red'
   g.lineWidth = 0.001
-  triangles.forEach(tri => {
-    const [a, b, c] = tri
-    g.beginPath()
-    g.moveTo(a.x, a.y)
-    g.lineTo(b.x, b.y)
-    g.lineTo(c.x, c.y)
-    g.closePath()
-    g.fill()
-    g.stroke()
-  })
-
+  for (const tris of subTriangles) {
+    for (const tri of tris) {
+      const [a, b, c] = tri
+      g.beginPath()
+      g.moveTo(a.x, a.y)
+      g.lineTo(b.x, b.y)
+      g.lineTo(c.x, c.y)
+      g.closePath()
+      g.fill()
+      g.stroke()
+    }
+    console.error(tris.length)
+  }
   document.body.appendChild(c)
-  console.error(triangles.length)
 
   const renderer = new THREE.WebGLRenderer()
   document.body.appendChild(renderer.domElement)
@@ -69,30 +116,6 @@ window.addEventListener('load', () => {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
   camera.position.set(0, 0, 4)
-  const vertices = []
-  const indices = []
-  const normals = []
-  const uvs = []
-  const indicesMap = {}
-  for (const triangle of triangles) {
-    for (const p of triangle) {
-      const key = [p.x, p.y, p.z]
-      let index = indicesMap[key]
-      if (index === undefined) {
-        index = vertices.length / 3
-        indicesMap[key] = index
-        uvs.push((p.x + 1) / 2, (p.y + 1) / 2)
-        vertices.push(p.x, p.y, p.z)
-        normals.push(p.nx, p.ny, p.nz)
-      }
-      indices.push(index)
-    }
-  }
-  const geometry = new THREE.BufferGeometry()
-  geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3))
-  geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3))
-  geometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2))
-  geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1))
   const texcanvas = document.createElement('canvas')
   texcanvas.width = texcanvas.height = 256
   const texctx = texcanvas.getContext('2d')
@@ -107,14 +130,20 @@ window.addEventListener('load', () => {
   const texture = new THREE.Texture(texcanvas)
   texture.needsUpdate = true
   const material = new THREE.MeshPhongMaterial({ color: 0xffffff, map: texture })
-  const box = new THREE.Mesh(geometry, material)
+  const meshes = []
+  for (const tris of subTriangles) {
+    const mesh = new THREE.Mesh(geometryFromTriangle(tris), material)
+    meshes.push(mesh)
+    scene.add(mesh)
+  }
   const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
   directionalLight.position.set(1, 2, 3)
-  scene.add(box)
   scene.add(directionalLight)
   function animate() {
-    box.rotation.y += 0.01
-    box.rotation.x += 0.005
+    for (const mesh of meshes) {
+      mesh.rotation.y += 0.01
+      mesh.rotation.x += 0.005
+    }
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
   }
