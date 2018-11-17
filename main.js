@@ -1,3 +1,38 @@
+function sqDrawEyes(ctx) {
+  ctx.save()
+  ctx.translate(0.15,0)
+  ctx.beginPath()
+  ctx.curve([
+    {x:0.34,y:0},
+    {x:0.4,y:0.32},
+    {x:0.2,y:0.65},
+    {x:-0.22,y:0.65},
+    {x:-0.4,y:0.32},
+    {x:-0.34,y:0},
+    {x:-0.4,y:-0.32},
+    {x:-0.22,y:-0.65},
+    {x:0.2,y:-0.65},
+    {x:0.4,y:-0.32}
+  ], true)
+  ctx.fillStyle = 'black'
+  ctx.fill()
+  for (let d = -1; d <= 1; d += 2) {
+    ctx.beginPath()
+    ctx.arc(0.02,0.3*d,0.34,0,2*Math.PI)
+    ctx.fillStyle = 'white'
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(0.08,0.3*d,0.22,0,2*Math.PI)
+    ctx.fillStyle = 'black'
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(0.15,0.3*d-0.1,0.03,0,2*Math.PI)
+    ctx.fillStyle = 'white'
+    ctx.fill()
+  }
+  ctx.restore()
+}
+
 onload = () => {
   const canvas = document.createElement('canvas')
   const size = 1024
@@ -19,7 +54,6 @@ onload = () => {
       return f(a, p, b)
     })
   }
-
 
   const coords = ikachanCoords()
   function shrinkCoords(coords, l){
@@ -55,36 +89,9 @@ onload = () => {
   }
 
   ctx.globalAlpha = 0.6
-  ctx.translate(0.15,0)
-  ctx.beginPath()
-  ctx.curve([
-    {x:0.34,y:0},
-    {x:0.4,y:0.32},
-    {x:0.2,y:0.65},
-    {x:-0.22,y:0.65},
-    {x:-0.4,y:0.32},
-    {x:-0.34,y:0},
-    {x:-0.4,y:-0.32},
-    {x:-0.22,y:-0.65},
-    {x:0.2,y:-0.65},
-    {x:0.4,y:-0.32}
-  ], true)
-  ctx.fill()
-  for (let d = -1; d <= 1; d += 2) {
-    ctx.beginPath()
-    ctx.arc(0.02,0.3*d,0.34,0,2*Math.PI)
-    ctx.fillStyle = 'white'
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(0.08,0.3*d,0.22,0,2*Math.PI)
-    ctx.fillStyle = 'black'
-    ctx.fill()
-    ctx.beginPath()
-    ctx.arc(0.15,0.3*d-0.1,0.03,0,2*Math.PI)
-    ctx.fillStyle = 'white'
-    ctx.fill()
-  }
+  sqDrawEyes(ctx)
 }
+
 
 const triangles = coordsShrink3D()
 window.addEventListener('load', () => {
@@ -156,10 +163,10 @@ window.addEventListener('load', () => {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
   camera.position.set(0, 0, 4)
-  const geometry = new THREE.BufferGeometry()
   const vertices = []
   const indices = []
   const normals = []
+  const uvs = []
   const indicesMap = {}
   for (const triangle of triangles) {
     for (const p of triangle) {
@@ -168,19 +175,33 @@ window.addEventListener('load', () => {
       if (index === undefined) {
         index = vertices.length / 3
         indicesMap[key] = index
+        uvs.push((p.x + 1) / 2, (p.y + 1) / 2)
         vertices.push(p.x, p.y, p.z)
         normals.push(p.nx, p.ny, p.nz)
       }
       indices.push(index)
     }
   }
-  // return
+  const geometry = new THREE.BufferGeometry()
   geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3))
-  geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1))
   // geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3))
+  geometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2))
+  geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1))
   geometry.computeVertexNormals()
-  const material = new THREE.MeshPhongMaterial()
-  // const material = new THREE.MeshStandardMaterial()
+  const texcanvas = document.createElement('canvas')
+  texcanvas.width = texcanvas.height = 256
+  const texctx = texcanvas.getContext('2d')
+  texctx.scale(texcanvas.width, texcanvas.height)
+  texctx.fillStyle = '#fa4'
+  texctx.fillRect(0, 0, 1, 1)
+  texctx.translate(0.5, 0.5)
+  texctx.scale(0.5, 0.5)
+  sqDrawEyes(texctx)
+
+
+  const texture = new THREE.Texture(texcanvas)
+  texture.needsUpdate = true
+  const material = new THREE.MeshPhongMaterial({ color: 0xffffff, map: texture })
   const box = new THREE.Mesh(geometry, material)
   const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
   directionalLight.position.set(1, 2, 3)
