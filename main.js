@@ -35,20 +35,6 @@ window.addEventListener('load', () => {
     g.putImageData(d, 0, 0)
     document.body.appendChild(c)
   }
-  for (let i = triangles.length - 1; i >= 0; i--) {
-    triangles.push(triangles[i].map(p => {
-      const nz = -p.nz / 2
-      const nr = Math.sqrt(p.nx ** 2 + p.ny ** 2 + nz ** 2)
-      return {
-        x: p.x,
-        y: p.y,
-        z: -p.z / 2,
-        nx: p.nx / nr,
-        ny: p.ny / nr,
-        nz: nz / nr
-      }
-    }).reverse())
-  }
 
   const c=document.createElement('canvas')
   const size = c.width = c.height = 1024

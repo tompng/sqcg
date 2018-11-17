@@ -49,15 +49,15 @@ function coordsShrink3D() {
   }
   function zfunc(i) {
     const t = i / 18
-    return (1 - (1 - t) ** 2) / 3
+    return (1 - (1 - t) ** 3) / 3
   }
   let tmpcoords = coords
-  for(let i = 0; i < 18; i++) {
-    const sh = 0.1 * (i + 1) ** 2 / 256
+  for(let i = 0; i < 16; i++) {
+    const sh = 0.1 * (i + 1) / 16
     const coordsWas = tmpcoords
     tmpcoords = shrinkCoords(tmpcoords, sh)
     tmpcoords = replotCoords(tmpcoords, 0.06)
-    tmpcoords = smooth(tmpcoords, i < 6 ? 0 : (i - 6))
+    tmpcoords = smooth(tmpcoords, i / 2)
     fill(coordsWas, tmpcoords, zfunc(i), zfunc(i + 1))
   }
   const center = { x: 0, y: 0 }
@@ -66,10 +66,24 @@ function coordsShrink3D() {
     center.y += p.y / tmpcoords.length
   })
   for (let i = 0; i < tmpcoords.length; i++) {
-    const p = { ...tmpcoords[i], z: zfunc(18) }
-    const q = { ...tmpcoords[(i + 1) % tmpcoords.length], z: zfunc(18) }
-    const c = { ...center, z: zfunc(18.5) }
+    const p = { ...tmpcoords[i], z: zfunc(16) }
+    const q = { ...tmpcoords[(i + 1) % tmpcoords.length], z: zfunc(16) }
+    const c = { ...center, z: zfunc(17) }
     triangles.push([p, q, c])
+  }
+  for (let i = triangles.length - 1; i >= 0; i--) {
+    triangles.push(triangles[i].map(p => {
+      const nz = -p.nz / 2
+      const nr = Math.sqrt(p.nx ** 2 + p.ny ** 2 + nz ** 2)
+      return {
+        x: p.x,
+        y: p.y,
+        z: Math.atan(-8 * p.z) / 8,
+        nx: p.nx / nr,
+        ny: p.ny / nr,
+        nz: nz / nr
+      }
+    }).reverse())
   }
   return triangles
 }
