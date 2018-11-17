@@ -46,34 +46,7 @@ CanvasRenderingContext2D.prototype.curve = function(points, closed, noMove) {
     this.bezierCurveTo(bx, by, cx, cy, dx, dy)
   })
 }
-function ikachanCoords2(){
-  const ikaCoords = [
-    {x:0,y:0},
-    {x:-47,y:30},
-    {x:-112,y:103},
-    {x:-135,y:165},
-    {x:-94,y:181},
-    {x:-80,y:191},
-    {x:-73,y:226},
-    {x:-78,y:259},
-    {x:-61,y:286},
-    {x:-42,y:266},
-    {x:-37,y:252},
-    {x:-35,y:272},
-    {x:-20,y:290},
-    {x:-5,y:276},
-    {x:0,y:258},
-  ]
-  ;[...ikaCoords].reverse().forEach(c => {
-    ikaCoords.push({ x: -c.x, y: c.y })
-  })
-  ikaCoords.pop()
-  ikaCoords.forEach(c => {
-    c.x /= 100
-    c.y = (c.y - 140) / 100
-  })
-  return ikaCoords
-}
+
 function ikachanShapeFunc(x, y) {
   const f = 5/2+Math.pow(6/5-Math.cos(15*y), 1/4)
   const g = 5+Math.pow(5*y*(1+x/3)/3,16)
@@ -175,4 +148,39 @@ function funcToCoords(f, n, z, m =  0x100) {
     output.push({ x: p.x, y: -p.y })
   }
   return output
+}
+
+function sqDrawEyes(ctx) {
+  ctx.save()
+  ctx.translate(0.15,0)
+  ctx.beginPath()
+  ctx.curve([
+    {x:0.34,y:0},
+    {x:0.4,y:0.32},
+    {x:0.2,y:0.65},
+    {x:-0.22,y:0.65},
+    {x:-0.4,y:0.32},
+    {x:-0.34,y:0},
+    {x:-0.4,y:-0.32},
+    {x:-0.22,y:-0.65},
+    {x:0.2,y:-0.65},
+    {x:0.4,y:-0.32}
+  ], true)
+  ctx.fillStyle = 'black'
+  ctx.fill()
+  for (let d = -1; d <= 1; d += 2) {
+    ctx.beginPath()
+    ctx.arc(0.02,0.3*d,0.34,0,2*Math.PI)
+    ctx.fillStyle = 'white'
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(0.08,0.3*d,0.22,0,2*Math.PI)
+    ctx.fillStyle = 'black'
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(0.15,0.3*d-0.1,0.03,0,2*Math.PI)
+    ctx.fillStyle = 'white'
+    ctx.fill()
+  }
+  ctx.restore()
 }
