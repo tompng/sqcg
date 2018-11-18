@@ -165,11 +165,20 @@ function trimTriangles(triangles, xmin, ymin, size) {
   }
   return out.map(tri => {
     return tri.map(p => {
+      window.aaa = window.aaa || p.z
+      window.bbb = window.bbb || p.z
+      if (window.aaa < p.z) window.aaa = p.z
+      if (window.bbb > p.z) window.bbb = p.z
+      0.25 + p.z
+      const zscale = size
+      const nr = Math.sqrt(p.nx ** 2 + p.ny ** 2 + (p.nz / size) ** 2)
       return {
-        ...p,
+        nx: p.nx / nr,
+        ny: p.ny / nr,
+        nz: p.nz / size / nr,
         x: (p.x - xmin) / size,
         y: (p.y - ymin) / size,
-        z: 0.5 + p.z / size
+        z: 0.25 + p.z
       }
     })
   })

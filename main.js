@@ -67,8 +67,53 @@ const vertexCode = `
 precision mediump float;
 varying vec2 vtexcoord;
 varying vec3 vnormal;
+uniform vec3 v000, v001, v010, v011, v100, v101, v110, v111;
+uniform vec3 vx000, vx001, vx010, vx011, vx100, vx101, vx110, vx111;
+uniform vec3 vy000, vy001, vy010, vy011, vy100, vy101, vy110, vy111;
+uniform vec3 vz000, vz001, vz010, vz011, vz100, vz101, vz110, vz111;
 void main() {
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  float x = position.x;
+  float y = position.y;
+  float z = position.z;
+  vec3 a1 = position * position * (3.0 - 2.0 * position);
+  vec3 a0 = 1.0 - a1;
+  vec3 b0 = position * (1.0 - position) * (1.0 - position);
+  vec3 b1 = position * position * (position - 1.0);
+  vec3 pos = (
+    v000 * a0.x * a0.y * a0.z +
+    v001 * a0.x * a0.y * a1.z +
+    v010 * a0.x * a1.y * a0.z +
+    v011 * a0.x * a1.y * a1.z +
+    v100 * a1.x * a0.y * a0.z +
+    v101 * a1.x * a0.y * a1.z +
+    v110 * a1.x * a1.y * a0.z +
+    v111 * a1.x * a1.y * a1.z +
+    vx000 * b0.x * a0.y * a0.z +
+    vx001 * b0.x * a0.y * a1.z +
+    vx010 * b0.x * a1.y * a0.z +
+    vx011 * b0.x * a1.y * a1.z +
+    vx100 * b1.x * a0.y * a0.z +
+    vx101 * b1.x * a0.y * a1.z +
+    vx110 * b1.x * a1.y * a0.z +
+    vx111 * b1.x * a1.y * a1.z +
+    vy000 * a0.x * b0.y * a0.z +
+    vy001 * a0.x * b0.y * a1.z +
+    vy010 * a0.x * b1.y * a0.z +
+    vy011 * a0.x * b1.y * a1.z +
+    vy100 * a1.x * b0.y * a0.z +
+    vy101 * a1.x * b0.y * a1.z +
+    vy110 * a1.x * b1.y * a0.z +
+    vy111 * a1.x * b1.y * a1.z +
+    vz000 * a0.x * a0.y * b0.z +
+    vz001 * a0.x * a0.y * b1.z +
+    vz010 * a0.x * a1.y * b0.z +
+    vz011 * a0.x * a1.y * b1.z +
+    vz100 * a1.x * a0.y * b0.z +
+    vz101 * a1.x * a0.y * b1.z +
+    vz110 * a1.x * a1.y * b0.z +
+    vz111 * a1.x * a1.y * b1.z
+  );
+  gl_Position = projectionMatrix * viewMatrix * vec4(pos, 1);
   vnormal = normalMatrix * normal;
   vtexcoord = uv.xy;
 }
@@ -160,19 +205,50 @@ window.addEventListener('load', () => {
   texctx.scale(0.5, 0.5)
   sqDrawEyes(texctx)
 
-
   const texture = new THREE.Texture(texcanvas)
   texture.needsUpdate = true
   const meshes = []
-  for (const section of ikaSections) {
-    const mesh = new THREE.Mesh(geometryFromIkaSection(section), ikaShader({
+  for (const sec of ikaSections) {
+    const fv = (x, y, z) => new THREE.Vector3(x, y, z + 0.2 * Math.sin(3 * x + 2 * y))
+    const fx = (x, y, z) => new THREE.Vector3(sec.size, 0, 0.2 * sec.size * 3 * Math.cos(3 * x + 2 * y))
+    const fy = (x, y, z) => new THREE.Vector3(0, sec.size, 0.2 * sec.size * 2 *  Math.cos(3 * x + 2 * y))
+    const fz = (x, y, z) => new THREE.Vector3(0, 0, 1)
+    const mesh = new THREE.Mesh(geometryFromIkaSection(sec), ikaShader({
       map: { value: texture },
-
+      v000: { value: fv(sec.xmin, sec.ymin, -0.5) },
+      v001: { value: fv(sec.xmin, sec.ymin, 0.5) },
+      v010: { value: fv(sec.xmin, sec.ymin + sec.size, -0.5) },
+      v011: { value: fv(sec.xmin, sec.ymin + sec.size, 0.5) },
+      v100: { value: fv(sec.xmin + sec.size, sec.ymin, -0.5) },
+      v101: { value: fv(sec.xmin + sec.size, sec.ymin, 0.5) },
+      v110: { value: fv(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
+      v111: { value: fv(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
+      vx000: { value: fx(sec.xmin, sec.ymin, -0.5) },
+      vx001: { value: fx(sec.xmin, sec.ymin, 0.5) },
+      vx010: { value: fx(sec.xmin, sec.ymin + sec.size, -0.5) },
+      vx011: { value: fx(sec.xmin, sec.ymin + sec.size, 0.5) },
+      vx100: { value: fx(sec.xmin + sec.size, sec.ymin, -0.5) },
+      vx101: { value: fx(sec.xmin + sec.size, sec.ymin, 0.5) },
+      vx110: { value: fx(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
+      vx111: { value: fx(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
+      vy000: { value: fy(sec.xmin, sec.ymin, -0.5) },
+      vy001: { value: fy(sec.xmin, sec.ymin, 0.5) },
+      vy010: { value: fy(sec.xmin, sec.ymin + sec.size, -0.5) },
+      vy011: { value: fy(sec.xmin, sec.ymin + sec.size, 0.5) },
+      vy100: { value: fy(sec.xmin + sec.size, sec.ymin, -0.5) },
+      vy101: { value: fy(sec.xmin + sec.size, sec.ymin, 0.5) },
+      vy110: { value: fy(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
+      vy111: { value: fy(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
+      vz000: { value: fz(sec.xmin, sec.ymin, -0.5) },
+      vz001: { value: fz(sec.xmin, sec.ymin, 0.5) },
+      vz010: { value: fz(sec.xmin, sec.ymin + sec.size, -0.5) },
+      vz011: { value: fz(sec.xmin, sec.ymin + sec.size, 0.5) },
+      vz100: { value: fz(sec.xmin + sec.size, sec.ymin, -0.5) },
+      vz101: { value: fz(sec.xmin + sec.size, sec.ymin, 0.5) },
+      vz110: { value: fz(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
+      vz111: { value: fz(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
     }))
     meshes.push(mesh)
-    mesh.position.x = section.xmin
-    mesh.position.y = section.ymin
-    mesh.scale.x = mesh.scale.y = mesh.scale.z = section.size
     scene.add(mesh)
   }
   const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
@@ -182,7 +258,7 @@ window.addEventListener('load', () => {
     const t = performance.now() / 1000
     const zcos = Math.cos(0.24 * t)
     const zsin = Math.sin(0.24 * t)
-    camera.position.set(4 * Math.cos(0.2 * t) * zsin, 4 * Math.sin(0.3 * t) * zsin, 4 * zcos)
+    camera.position.set(4 * Math.cos(0.2 * t) * zsin, 4 * Math.sin(0.2 * t) * zsin, 4 * zcos)
     camera.lookAt(0, 0, 0)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
