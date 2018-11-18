@@ -115,9 +115,9 @@ function coordsShrink3D() {
   return triangles
 }
 
-function trimTriangles(triangles, xrange, yrange) {
-  const [xmin, xmax] = xrange
-  const [ymin, ymax] = yrange
+function trimTriangles(triangles, xmin, ymin, size) {
+  const xmax = xmin + size
+  const ymax = ymin + size
   const out = []
   function interpolate2(a, b, t) {
     const x = a.x + (b.x - a.x) * t
@@ -163,5 +163,14 @@ function trimTriangles(triangles, xrange, yrange) {
       out.push([coords[0], coords[i], coords[i + 1]])
     }
   }
-  return out
+  return out.map(tri => {
+    return tri.map(p => {
+      return {
+        ...p,
+        x: (p.x - xmin) / size,
+        y: (p.y - ymin) / size,
+        z: 0.5 + p.z / size
+      }
+    })
+  })
 }

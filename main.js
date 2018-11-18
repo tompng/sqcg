@@ -15,37 +15,39 @@ onload = () => {
 }
 
 const ikaTriangles = coordsShrink3D()
-const subTriangles = []
+const ikaSections = []
 const subTriStep = 4
 for (let i = -subTriStep; i < subTriStep; i++) {
   for (let j = -subTriStep; j < subTriStep; j++) {
-    const xmin = i / 4
-    const xrange = [i / subTriStep * 1.3 + 0.3, (i + 1) * 1.3 / subTriStep + 0.3]
-    const yrange = [j / subTriStep * 1.3, (j + 1) / subTriStep * 1.3]
-    const tris = trimTriangles(ikaTriangles, xrange, yrange)
-    if (tris.length) subTriangles.push(tris)
+    const xmin = i / subTriStep * 1.3 + 0.3
+    const ymin = j / subTriStep * 1.3
+    const size = 1.3 / subTriStep
+    const tris = trimTriangles(ikaTriangles, xmin, ymin, size)
+    if (tris.length) ikaSections.push({ triangles: tris, xmin, ymin, size })
   }
 }
 
-function geometryFromTriangle(triangles) {
+function geometryFromIkaSection(section) {
   const vertices = []
   const indices = []
   const normals = []
   const uvs = []
   const indicesMap = {}
-  const p0 = triangles[0][0]
-  const r0 = Math.sqrt(p0.x ** 2 + p0.y ** 2)
-  for (const triangle of triangles) {
+  const r0 = Math.sqrt(section.xmin ** 2 + section.ymin ** 2)
+  for (const triangle of section.triangles) {
     for (const p of triangle) {
       const key = [p.x, p.y, p.z]
       let index = indicesMap[key]
       if (index === undefined) {
         index = vertices.length / 3
         indicesMap[key] = index
-        if (p.z < 0) {
-          uvs.push((p0.x / r0 + 1) / 2, (p0.y / r0 + 1) / 2)
+
+        if (p.z < 0.5) {
+          uvs.push((section.xmin / r0 + 1) / 2, (section.ymin / r0 + 1) / 2)
         } else {
-          uvs.push((p.x + 1) / 2, (p.y + 1) / 2)
+          const x = section.xmin + section.size * p.x
+          const y = section.ymin + section.size * p.y
+          uvs.push((x + 1) / 2, (y + 1) / 2)
         }
         vertices.push(p.x, p.y, p.z)
         normals.push(p.nx, p.ny, p.nz)
@@ -59,6 +61,35 @@ function geometryFromTriangle(triangles) {
   geometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2))
   geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1))
   return geometry
+}
+
+const vertexCode = `
+precision mediump float;
+varying vec2 vtexcoord;
+varying vec3 vnormal;
+void main() {
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  vnormal = normalMatrix * normal;
+  vtexcoord = uv.xy;
+}
+`
+const fragmentCode = `
+precision mediump float;
+uniform sampler2D map;
+varying vec2 vtexcoord;
+varying vec3 vnormal;
+void main() {
+  float shadow = 0.5 + 0.5 * dot(normalize(vnormal), vec3(0.48, 0.64, 0.6));
+  gl_FragColor.rgb = texture2D(map, vtexcoord).rgb * shadow;
+}
+`
+
+function ikaShader(uniforms) {
+  return new THREE.ShaderMaterial({
+    vertexShader: vertexCode,
+    fragmentShader: fragmentCode,
+    uniforms
+  });
 }
 
 window.addEventListener('load', () => {
@@ -91,8 +122,11 @@ window.addEventListener('load', () => {
   g.fillStyle = 'rgba(0, 0, 0, 0.2)'
   g.strokeStyle = 'red'
   g.lineWidth = 0.001
-  for (const tris of subTriangles) {
-    for (const tri of tris) {
+  for (const section of ikaSections) {
+    g.save()
+    g.translate(section.xmin, section.ymin)
+    g.scale(section.size, section.size)
+    for (const tri of section.triangles) {
       const [a, b, c] = tri
       g.beginPath()
       g.moveTo(a.x, a.y)
@@ -102,7 +136,7 @@ window.addEventListener('load', () => {
       g.fill()
       g.stroke()
     }
-    console.error(tris.length)
+    g.restore()
   }
   document.body.appendChild(c)
 
@@ -129,21 +163,27 @@ window.addEventListener('load', () => {
 
   const texture = new THREE.Texture(texcanvas)
   texture.needsUpdate = true
-  const material = new THREE.MeshPhongMaterial({ color: 0xffffff, map: texture })
   const meshes = []
-  for (const tris of subTriangles) {
-    const mesh = new THREE.Mesh(geometryFromTriangle(tris), material)
+  for (const section of ikaSections) {
+    const mesh = new THREE.Mesh(geometryFromIkaSection(section), ikaShader({
+      map: { value: texture },
+
+    }))
     meshes.push(mesh)
+    mesh.position.x = section.xmin
+    mesh.position.y = section.ymin
+    mesh.scale.x = mesh.scale.y = mesh.scale.z = section.size
     scene.add(mesh)
   }
   const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
   directionalLight.position.set(1, 2, 3)
   scene.add(directionalLight)
   function animate() {
-    for (const mesh of meshes) {
-      mesh.rotation.y += 0.01
-      mesh.rotation.x += 0.005
-    }
+    const t = performance.now() / 1000
+    const zcos = Math.cos(0.24 * t)
+    const zsin = Math.sin(0.24 * t)
+    camera.position.set(4 * Math.cos(0.2 * t) * zsin, 4 * Math.sin(0.3 * t) * zsin, 4 * zcos)
+    camera.lookAt(0, 0, 0)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
   }
