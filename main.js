@@ -31,6 +31,8 @@ function geometryFromIkaSection(section) {
   const vertices = []
   const indices = []
   const normals = []
+  const tan1 = []
+  const tan2 = []
   const uvs = []
   const indicesMap = {}
   const r0 = Math.sqrt(section.xmin ** 2 + section.ymin ** 2)
@@ -41,7 +43,6 @@ function geometryFromIkaSection(section) {
       if (index === undefined) {
         index = vertices.length / 3
         indicesMap[key] = index
-
         if (p.z < 0.5) {
           uvs.push((section.xmin / r0 + 1) / 2, (section.ymin / r0 + 1) / 2)
         } else {
@@ -50,7 +51,21 @@ function geometryFromIkaSection(section) {
           uvs.push((x + 1) / 2, (y + 1) / 2)
         }
         vertices.push(p.x, p.y, p.z)
+        let t1
+        if (p.nz === 0) {
+          t1 = { x: 0, y: 0, z: 1 }
+        } else {
+          const tr = Math.sqrt(1 + (p.nx / p.nz) ** 2)
+          t1 = { x: 1 / tr, y: 0, z: -p.nx / p.nz / tr}
+        }
+        const t2 = {
+          x: t1.z * p.ny - t1.y * p.nz,
+          y: t1.x * p.nz - t1.z * p.nx,
+          z: t1.y * p.nx - t1.x * p.ny,
+        }
         normals.push(p.nx, p.ny, p.nz)
+        tan1.push(t1.x, t1.y, t1.z)
+        tan2.push(t2.x, t2.y, t2.z)
       }
       indices.push(index)
     }
@@ -58,6 +73,8 @@ function geometryFromIkaSection(section) {
   const geometry = new THREE.BufferGeometry()
   geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3))
   geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3))
+  geometry.addAttribute('tan1', new THREE.BufferAttribute(new Float32Array(tan1), 3))
+  geometry.addAttribute('tan2', new THREE.BufferAttribute(new Float32Array(tan2), 3))
   geometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2))
   geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1))
   return geometry
@@ -71,15 +88,57 @@ uniform vec3 v000, v001, v010, v011, v100, v101, v110, v111;
 uniform vec3 vx000, vx001, vx010, vx011, vx100, vx101, vx110, vx111;
 uniform vec3 vy000, vy001, vy010, vy011, vy100, vy101, vy110, vy111;
 uniform vec3 vz000, vz001, vz010, vz011, vz100, vz101, vz110, vz111;
-void main() {
-  float x = position.x;
-  float y = position.y;
-  float z = position.z;
-  vec3 a1 = position * position * (3.0 - 2.0 * position);
+attribute vec3 tan1, tan2;
+vec3 tangentTransform(vec3 p, vec3 delta) {
+  vec3 a1 = p * p * (3.0 - 2.0 * p);
   vec3 a0 = 1.0 - a1;
-  vec3 b0 = position * (1.0 - position) * (1.0 - position);
-  vec3 b1 = position * position * (position - 1.0);
-  vec3 pos = (
+  vec3 b0 = p * (1.0 - p) * (1.0 - p);
+  vec3 b1 = p * p * (p - 1.0);
+  vec3 da1 = 6.0 * p * (1.0 - p) * delta;
+  vec3 da0 = -da1;
+  vec3 db0 = (1.0 + p * (3.0 * p - 4.0)) * delta;
+  vec3 db1 = p * (3.0 * p - 2.0) * delta;
+  return (
+    v000 * (da0.x * a0.y * a0.z + a0.x * da0.y * a0.z + a0.x * a0.y * da0.z)+
+    v001 * (da0.x * a0.y * a1.z + a0.x * da0.y * a1.z + a0.x * a0.y * da1.z)+
+    v010 * (da0.x * a1.y * a0.z + a0.x * da1.y * a0.z + a0.x * a1.y * da0.z)+
+    v011 * (da0.x * a1.y * a1.z + a0.x * da1.y * a1.z + a0.x * a1.y * da1.z)+
+    v100 * (da1.x * a0.y * a0.z + a1.x * da0.y * a0.z + a1.x * a0.y * da0.z)+
+    v101 * (da1.x * a0.y * a1.z + a1.x * da0.y * a1.z + a1.x * a0.y * da1.z)+
+    v110 * (da1.x * a1.y * a0.z + a1.x * da1.y * a0.z + a1.x * a1.y * da0.z)+
+    v111 * (da1.x * a1.y * a1.z + a1.x * da1.y * a1.z + a1.x * a1.y * da1.z)+
+    vx000 * (db0.x * a0.y * a0.z + b0.x * da0.y * a0.z + b0.x * a0.y * da0.z)+
+    vx001 * (db0.x * a0.y * a1.z + b0.x * da0.y * a1.z + b0.x * a0.y * da1.z)+
+    vx010 * (db0.x * a1.y * a0.z + b0.x * da1.y * a0.z + b0.x * a1.y * da0.z)+
+    vx011 * (db0.x * a1.y * a1.z + b0.x * da1.y * a1.z + b0.x * a1.y * da1.z)+
+    vx100 * (db1.x * a0.y * a0.z + b1.x * da0.y * a0.z + b1.x * a0.y * da0.z)+
+    vx101 * (db1.x * a0.y * a1.z + b1.x * da0.y * a1.z + b1.x * a0.y * da1.z)+
+    vx110 * (db1.x * a1.y * a0.z + b1.x * da1.y * a0.z + b1.x * a1.y * da0.z)+
+    vx111 * (db1.x * a1.y * a1.z + b1.x * da1.y * a1.z + b1.x * a1.y * da1.z)+
+    vy000 * (da0.x * b0.y * a0.z + a0.x * db0.y * a0.z + a0.x * b0.y * da0.z)+
+    vy001 * (da0.x * b0.y * a1.z + a0.x * db0.y * a1.z + a0.x * b0.y * da1.z)+
+    vy010 * (da0.x * b1.y * a0.z + a0.x * db1.y * a0.z + a0.x * b1.y * da0.z)+
+    vy011 * (da0.x * b1.y * a1.z + a0.x * db1.y * a1.z + a0.x * b1.y * da1.z)+
+    vy100 * (da1.x * b0.y * a0.z + a1.x * db0.y * a0.z + a1.x * b0.y * da0.z)+
+    vy101 * (da1.x * b0.y * a1.z + a1.x * db0.y * a1.z + a1.x * b0.y * da1.z)+
+    vy110 * (da1.x * b1.y * a0.z + a1.x * db1.y * a0.z + a1.x * b1.y * da0.z)+
+    vy111 * (da1.x * b1.y * a1.z + a1.x * db1.y * a1.z + a1.x * b1.y * da1.z)+
+    vz000 * (da0.x * a0.y * b0.z + a0.x * da0.y * b0.z + a0.x * a0.y * db0.z)+
+    vz001 * (da0.x * a0.y * b1.z + a0.x * da0.y * b1.z + a0.x * a0.y * db1.z)+
+    vz010 * (da0.x * a1.y * b0.z + a0.x * da1.y * b0.z + a0.x * a1.y * db0.z)+
+    vz011 * (da0.x * a1.y * b1.z + a0.x * da1.y * b1.z + a0.x * a1.y * db1.z)+
+    vz100 * (da1.x * a0.y * b0.z + a1.x * da0.y * b0.z + a1.x * a0.y * db0.z)+
+    vz101 * (da1.x * a0.y * b1.z + a1.x * da0.y * b1.z + a1.x * a0.y * db1.z)+
+    vz110 * (da1.x * a1.y * b0.z + a1.x * da1.y * b0.z + a1.x * a1.y * db0.z)+
+    vz111 * (da1.x * a1.y * b1.z + a1.x * da1.y * b1.z + a1.x * a1.y * db1.z)
+  );
+}
+vec3 transform(vec3 p) {
+  vec3 a1 = p * p * (3.0 - 2.0 * p);
+  vec3 a0 = 1.0 - a1;
+  vec3 b0 = p * (1.0 - p) * (1.0 - p);
+  vec3 b1 = p * p * (p - 1.0);
+  return (
     v000 * a0.x * a0.y * a0.z +
     v001 * a0.x * a0.y * a1.z +
     v010 * a0.x * a1.y * a0.z +
@@ -113,8 +172,13 @@ void main() {
     vz110 * a1.x * a1.y * b0.z +
     vz111 * a1.x * a1.y * b1.z
   );
+}
+void main() {
+  vec3 pos = transform(position);
+  vec3 ta = tangentTransform(position, tan1);
+  vec3 tb = tangentTransform(position, tan2);
   gl_Position = projectionMatrix * viewMatrix * vec4(pos, 1);
-  vnormal = normalMatrix * normal;
+  vnormal = normalize(cross(ta, tb));
   vtexcoord = uv.xy;
 }
 `
