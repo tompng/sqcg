@@ -260,7 +260,7 @@ window.addEventListener('load', () => {
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
   camera.position.set(0, 0, 4)
   const texcanvas = document.createElement('canvas')
-  texcanvas.width = texcanvas.height = 256
+  texcanvas.width = texcanvas.height = 512
   const texctx = texcanvas.getContext('2d')
   texctx.scale(texcanvas.width, texcanvas.height)
   texctx.fillStyle = '#fa4'
@@ -273,45 +273,49 @@ window.addEventListener('load', () => {
   texture.needsUpdate = true
   const meshes = []
   for (const sec of ikaSections) {
-    const fv = (x, y, z) => new THREE.Vector3(x, y, z + 0.2 * Math.sin(3 * x + 2 * y))
-    const fx = (x, y, z) => new THREE.Vector3(sec.size, 0, 0.2 * sec.size * 3 * Math.cos(3 * x + 2 * y))
-    const fy = (x, y, z) => new THREE.Vector3(0, sec.size, 0.2 * sec.size * 2 *  Math.cos(3 * x + 2 * y))
-    const fz = (x, y, z) => new THREE.Vector3(0, 0, 1)
-    const mesh = new THREE.Mesh(geometryFromIkaSection(sec), ikaShader({
-      map: { value: texture },
-      v000: { value: fv(sec.xmin, sec.ymin, -0.5) },
-      v001: { value: fv(sec.xmin, sec.ymin, 0.5) },
-      v010: { value: fv(sec.xmin, sec.ymin + sec.size, -0.5) },
-      v011: { value: fv(sec.xmin, sec.ymin + sec.size, 0.5) },
-      v100: { value: fv(sec.xmin + sec.size, sec.ymin, -0.5) },
-      v101: { value: fv(sec.xmin + sec.size, sec.ymin, 0.5) },
-      v110: { value: fv(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
-      v111: { value: fv(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
-      vx000: { value: fx(sec.xmin, sec.ymin, -0.5) },
-      vx001: { value: fx(sec.xmin, sec.ymin, 0.5) },
-      vx010: { value: fx(sec.xmin, sec.ymin + sec.size, -0.5) },
-      vx011: { value: fx(sec.xmin, sec.ymin + sec.size, 0.5) },
-      vx100: { value: fx(sec.xmin + sec.size, sec.ymin, -0.5) },
-      vx101: { value: fx(sec.xmin + sec.size, sec.ymin, 0.5) },
-      vx110: { value: fx(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
-      vx111: { value: fx(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
-      vy000: { value: fy(sec.xmin, sec.ymin, -0.5) },
-      vy001: { value: fy(sec.xmin, sec.ymin, 0.5) },
-      vy010: { value: fy(sec.xmin, sec.ymin + sec.size, -0.5) },
-      vy011: { value: fy(sec.xmin, sec.ymin + sec.size, 0.5) },
-      vy100: { value: fy(sec.xmin + sec.size, sec.ymin, -0.5) },
-      vy101: { value: fy(sec.xmin + sec.size, sec.ymin, 0.5) },
-      vy110: { value: fy(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
-      vy111: { value: fy(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
-      vz000: { value: fz(sec.xmin, sec.ymin, -0.5) },
-      vz001: { value: fz(sec.xmin, sec.ymin, 0.5) },
-      vz010: { value: fz(sec.xmin, sec.ymin + sec.size, -0.5) },
-      vz011: { value: fz(sec.xmin, sec.ymin + sec.size, 0.5) },
-      vz100: { value: fz(sec.xmin + sec.size, sec.ymin, -0.5) },
-      vz101: { value: fz(sec.xmin + sec.size, sec.ymin, 0.5) },
-      vz110: { value: fz(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
-      vz111: { value: fz(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
-    }))
+    const mesh = new THREE.Mesh(geometryFromIkaSection(sec), ikaShader({ map: { value: texture } }))
+    mesh.updateMorph = (a, b, c) => {
+      const fv = (x, y, z) => new THREE.Vector3(x, y, z + 0.2 * Math.sin(a * x + b * y + c))
+      const fx = (x, y, z) => new THREE.Vector3(sec.size, 0, 0.2 * sec.size * a * Math.cos(a * x + b * y + c))
+      const fy = (x, y, z) => new THREE.Vector3(0, sec.size, 0.2 * sec.size * b *  Math.cos(a * x + b * y + c))
+      const fz = (x, y, z) => new THREE.Vector3(0, 0, 1)
+      const uniforms = {
+        v000: { value: fv(sec.xmin, sec.ymin, -0.5) },
+        v001: { value: fv(sec.xmin, sec.ymin, 0.5) },
+        v010: { value: fv(sec.xmin, sec.ymin + sec.size, -0.5) },
+        v011: { value: fv(sec.xmin, sec.ymin + sec.size, 0.5) },
+        v100: { value: fv(sec.xmin + sec.size, sec.ymin, -0.5) },
+        v101: { value: fv(sec.xmin + sec.size, sec.ymin, 0.5) },
+        v110: { value: fv(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
+        v111: { value: fv(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
+        vx000: { value: fx(sec.xmin, sec.ymin, -0.5) },
+        vx001: { value: fx(sec.xmin, sec.ymin, 0.5) },
+        vx010: { value: fx(sec.xmin, sec.ymin + sec.size, -0.5) },
+        vx011: { value: fx(sec.xmin, sec.ymin + sec.size, 0.5) },
+        vx100: { value: fx(sec.xmin + sec.size, sec.ymin, -0.5) },
+        vx101: { value: fx(sec.xmin + sec.size, sec.ymin, 0.5) },
+        vx110: { value: fx(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
+        vx111: { value: fx(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
+        vy000: { value: fy(sec.xmin, sec.ymin, -0.5) },
+        vy001: { value: fy(sec.xmin, sec.ymin, 0.5) },
+        vy010: { value: fy(sec.xmin, sec.ymin + sec.size, -0.5) },
+        vy011: { value: fy(sec.xmin, sec.ymin + sec.size, 0.5) },
+        vy100: { value: fy(sec.xmin + sec.size, sec.ymin, -0.5) },
+        vy101: { value: fy(sec.xmin + sec.size, sec.ymin, 0.5) },
+        vy110: { value: fy(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
+        vy111: { value: fy(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
+        vz000: { value: fz(sec.xmin, sec.ymin, -0.5) },
+        vz001: { value: fz(sec.xmin, sec.ymin, 0.5) },
+        vz010: { value: fz(sec.xmin, sec.ymin + sec.size, -0.5) },
+        vz011: { value: fz(sec.xmin, sec.ymin + sec.size, 0.5) },
+        vz100: { value: fz(sec.xmin + sec.size, sec.ymin, -0.5) },
+        vz101: { value: fz(sec.xmin + sec.size, sec.ymin, 0.5) },
+        vz110: { value: fz(sec.xmin + sec.size, sec.ymin + sec.size, -0.5) },
+        vz111: { value: fz(sec.xmin + sec.size, sec.ymin + sec.size, 0.5) },
+      }
+      for (const name in uniforms) mesh.material.uniforms[name] = uniforms[name]
+    }
+    mesh.updateMorph(3, 2, 4)
     meshes.push(mesh)
     scene.add(mesh)
   }
@@ -322,7 +326,11 @@ window.addEventListener('load', () => {
     const t = performance.now() / 1000
     const zcos = Math.cos(0.24 * t)
     const zsin = Math.sin(0.24 * t)
-    camera.position.set(4 * Math.cos(0.2 * t) * zsin, 4 * Math.sin(0.2 * t) * zsin, 4 * zcos)
+    for (const mesh of meshes){
+      mesh.updateMorph(4 * Math.cos(t), 4 * Math.sin(t), 4 * t)
+    }
+    // camera.position.set(4 * Math.cos(0.2 * t) * zsin, 4 * Math.sin(0.2 * t) * zsin, 4 * zcos)
+    camera.position.set(4 * Math.cos(0.2 * t) * zsin, 4 * Math.sin(0.2 * t) * zsin, 4)
     camera.lookAt(0, 0, 0)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
