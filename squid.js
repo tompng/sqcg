@@ -80,6 +80,8 @@ class Squid {
     this.texture = texture
     this.initializeMesh(sections)
     this.initializeJelly()
+    this.rotateJelly(0)
+    this.calculateJellyXYZ()
     this.updateMorph()
   }
   initializeMesh(sections) {
@@ -117,17 +119,69 @@ class Squid {
       }
     }
   }
-  updateJelly(t) {
+  updateJelly() {
+    this.eachCoord((i, j, k) => {
+      const p = this.jelly[i][j][k]
+      p.fx = p.fy = p.fz = 0
+    })
+    for (let i = 0; i < this.step; i++) {
+      for (let j = 0; j < this.step; j++) {
+        for (let a=0;a<8;a++) for (let b=a+1;b<8;b++) {
+          const ia = i+((a>>2)&1)
+          const ib = i+((b>>2)&1)
+          const ja = j+((a>>1)&1)
+          const jb = j+((b>>1)&1)
+          const ka = a&1
+          const kb = b&1
+          const pa = this.jelly[ia][ja][ka]
+          const pb = this.jelly[ib][jb][kb]
+          const l0 = Math.sqrt((this.xysize*(ia-ib))**2 + (this.xysize*(ja-jb))**2 + (this.zsize*(ka-kb))**2)
+          const dx = pb.x-pa.x
+          const dy = pb.y-pa.y
+          const dz = pb.z-pa.z
+          const l = Math.sqrt(dx**2 + dy**2 + dz**2)
+          const fx = (l-l0) * dx / l + (pb.vx - pa.vx) / 8
+          const fy = (l-l0) * dy / l + (pb.vy - pa.vy) / 8
+          const fz = (l-l0) * dz / l + (pb.vz - pa.vz) / 8
+          pa.fx += fx
+          pa.fy += fy
+          pa.fz += fz
+          pb.fx -= fx
+          pb.fy -= fy
+          pb.fz -= fz
+        }
+      }
+    }
+    const dt = 0.1
+    this.eachCoord((i, j, k) => {
+      const p = this.jelly[i][j][k]
+      p.x += p.vx * dt
+      p.y += p.vy * dt
+      p.z += p.vz * dt
+      p.vx += p.fx * dt
+      p.vy += p.fy * dt
+      p.vz += p.fz * dt - 0.02 * dt
+      if (p.z < 0) p.z = p.vz = 0
+    })
+    this.calculateJellyXYZ()
+    this.updateMorph()
+  }
+  rotateJelly(t) {
     const a = 4 * Math.cos(t)
     const b = 4 * Math.sin(t)
+    const cosrot = Math.cos(t * 0.2 + 0.5)
+    const sinrot = Math.sin(t * 0.2 + 0.5)
     this.eachCoord((i, j, k) => {
       const p = this.jelly[i][j][k]
       p.x = this.xysize * (i - this.step / 2) + 0.1 * Math.sin(3 * p.x - 4 * t)
       p.y = this.xysize * (j - this.step / 2)
-      p.z = this.zsize * (k - 0.5) + 0.1 * Math.sin(a * p.x + b * p.y - 2 * t) + 0.5
+      p.z = this.zsize * (k - 0.5) + 0.1 * Math.sin(a * p.x + b * p.y - 2 * t)
+      const px = p.x * cosrot + p.z * sinrot
+      const pz = p.z * cosrot - p.x * sinrot
+      p.x = px
+      p.z = pz + 2
+      p.vx = p.vy = p.vz = 0
     })
-    this.calculateJellyXYZ()
-    this.updateMorph()
   }
   calculateJellyXYZ() {
     this.eachCoord((i, j, k) => {
