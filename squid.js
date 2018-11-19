@@ -73,7 +73,94 @@ function geometryFromIkaSection(section) {
 
 
 class Squid {
-  constructor() {
-
+  constructor(sections, step, texture) {
+    this.xysize = sections[0].size
+    this.zsize = 1
+    this.step = step
+    this.texture = texture
+    this.initializeMesh(sections)
+    this.initializeJelly()
+    this.updateMorph()
+  }
+  initializeMesh(sections) {
+    this.meshGroup = new THREE.Group()
+    this.sections = sections.map(section => {
+      const material = ikaShader({ map: { value: this.texture } })
+      const mesh = new THREE.Mesh(section.geometry, material)
+      this.meshGroup.add(mesh)
+      return { ...section, mesh, material}
+    })
+  }
+  updateMorph() {
+    function each3(f) {
+      for (let i = 0; i < 8; i++) f((i >> 2) & 1, (i >> 1) & 1, i & 1)
+    }
+    for (const sec of this.sections) {
+      const i = sec.i
+      const j = sec.j
+      const uniforms = {}
+      each3((x,y,z) => {
+        const v = this.jelly[i + x][j + y][z]
+        sec.material.uniforms['v' + x + y + z] = { value: new THREE.Vector3(v.x, v.y, v.z) }
+        sec.material.uniforms['vx' + x + y + z] = { value: new THREE.Vector3(v.xx, v.yx, v.zx) }
+        sec.material.uniforms['vy' + x + y + z] = { value: new THREE.Vector3(v.xy, v.yy, v.zy) }
+        sec.material.uniforms['vz' + x + y + z] = { value: new THREE.Vector3(v.xz, v.yz, v.zz) }
+      })
+    }
+  }
+  eachCoord(f) {
+    for (let i = 0; i <= this.step; i++) {
+      for (let j = 0; j <= this.step; j++) {
+        for (let k = 0; k < 2; k++) {
+          f(i, j, k)
+        }
+      }
+    }
+  }
+  updateJelly(t) {
+    const a = 4 * Math.cos(t)
+    const b = 4 * Math.sin(t)
+    this.eachCoord((i, j, k) => {
+      const p = this.jelly[i][j][k]
+      p.x = this.xysize * (i - this.step / 2) + 0.1 * Math.sin(3 * p.x - 4 * t)
+      p.y = this.xysize * (j - this.step / 2)
+      p.z = this.zsize * (k - 0.5) + 0.1 * Math.sin(a * p.x + b * p.y - 2 * t) + 0.5
+    })
+    this.calculateJellyXYZ()
+    this.updateMorph()
+  }
+  calculateJellyXYZ() {
+    this.eachCoord((i, j, k) => {
+      const ia = i === 0 ? 0 : i - 1
+      const ib = i === this.step ? this.step : i + 1
+      const ja = j === 0 ? 0 : j - 1
+      const jb = j === this.step ? this.step : j + 1
+      const p = this.jelly[i][j][k]
+      p.xx = (this.jelly[ib][j][k].x - this.jelly[ia][j][k].x) / (ib - ia)
+      p.yx = (this.jelly[ib][j][k].y - this.jelly[ia][j][k].y) / (ib - ia)
+      p.zx = (this.jelly[ib][j][k].z - this.jelly[ia][j][k].z) / (ib - ia)
+      p.xy = (this.jelly[i][jb][k].x - this.jelly[i][ja][k].x) / (jb - ja)
+      p.yy = (this.jelly[i][jb][k].y - this.jelly[i][ja][k].y) / (jb - ja)
+      p.zy = (this.jelly[i][jb][k].z - this.jelly[i][ja][k].z) / (jb - ja)
+      p.xz = this.jelly[i][j][1].x - this.jelly[i][j][0].x
+      p.yz = this.jelly[i][j][1].y - this.jelly[i][j][0].y
+      p.zz = this.jelly[i][j][1].z - this.jelly[i][j][0].z
+    })
+  }
+  initializeJelly() {
+    this.jelly = []
+    this.eachCoord((i, j, k) => {
+      this.jelly[i] = this.jelly[i] || []
+      this.jelly[i][j] = this.jelly[i][j] || []
+      this.jelly[i][j][k] = {
+        x: this.xysize * (i - this.step / 2),
+        y: this.xysize * (j - this.step / 2),
+        z: this.zsize * (k - 0.5),
+        vx: 0,
+        vy: 0,
+        vz: 0
+      }
+    })
+    this.calculateJellyXYZ()
   }
 }
