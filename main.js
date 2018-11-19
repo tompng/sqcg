@@ -252,8 +252,8 @@ window.addEventListener('load', () => {
   const renderer = new THREE.WebGLRenderer()
   document.body.appendChild(renderer.domElement)
   renderer.domElement.style.boxShadow = '0 0 1px black'
-  const width = 800
-  const height = 600
+  const width = 1200
+  const height = 900
   renderer.setSize(width, height)
   renderer.setPixelRatio(window.devicePixelRatio)
   const scene = new THREE.Scene()
@@ -275,9 +275,9 @@ window.addEventListener('load', () => {
   for (const sec of ikaSections) {
     const mesh = new THREE.Mesh(geometryFromIkaSection(sec), ikaShader({ map: { value: texture } }))
     mesh.updateMorph = (a, b, c) => {
-      const fv = (x, y, z) => new THREE.Vector3(x, y, z + 0.2 * Math.sin(a * x + b * y + c))
-      const fx = (x, y, z) => new THREE.Vector3(sec.size, 0, 0.2 * sec.size * a * Math.cos(a * x + b * y + c))
-      const fy = (x, y, z) => new THREE.Vector3(0, sec.size, 0.2 * sec.size * b *  Math.cos(a * x + b * y + c))
+      const fv = (x, y, z) => new THREE.Vector3(x + 0.1 * Math.sin(a * x - 4 * c), y, z + 0.1 * Math.sin(a * x + b * y + c))
+      const fx = (x, y, z) => new THREE.Vector3(sec.size + 0.1 * a * sec.size * Math.cos(a * x - 4 * c), 0, 0.1 * sec.size * a * Math.cos(a * x + b * y + c))
+      const fy = (x, y, z) => new THREE.Vector3(0, sec.size, 0.1 * sec.size * b *  Math.cos(a * x + b * y + c))
       const fz = (x, y, z) => new THREE.Vector3(0, 0, 1)
       const uniforms = {
         v000: { value: fv(sec.xmin, sec.ymin, -0.5) },
@@ -315,10 +315,13 @@ window.addEventListener('load', () => {
       }
       for (const name in uniforms) mesh.material.uniforms[name] = uniforms[name]
     }
-    mesh.updateMorph(3, 2, 4)
     meshes.push(mesh)
     scene.add(mesh)
   }
+  const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(), new THREE.MeshPhongMaterial())
+  plane.position.set(0, 0, 0)
+  plane.scale.set(3, 3, 3)
+  scene.add(plane)
   const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
   directionalLight.position.set(1, 2, 3)
   scene.add(directionalLight)
@@ -330,7 +333,7 @@ window.addEventListener('load', () => {
       mesh.updateMorph(4 * Math.cos(t), 4 * Math.sin(t), 4 * t)
     }
     // camera.position.set(4 * Math.cos(0.2 * t) * zsin, 4 * Math.sin(0.2 * t) * zsin, 4 * zcos)
-    camera.position.set(4 * Math.cos(0.2 * t) * zsin, 4 * Math.sin(0.2 * t) * zsin, 4)
+    camera.position.set(4 * Math.cos(0.2 * t) * zsin, 4 * Math.sin(0.2 * t) * zsin, 3)
     camera.lookAt(0, 0, 0)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
