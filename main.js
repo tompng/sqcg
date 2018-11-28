@@ -103,7 +103,7 @@ window.addEventListener('load', () => {
     const t = performance.now() / 1000
     const zcos = Math.cos(0.24 * t)
     const zsin = Math.sin(0.24 * t)
-    squid.updateJelly()
+    for(let i=0;i<3;i++)squid.updateJelly()
 
     // squid.rotateJelly(t)
     // squid.calculateJellyXYZ()

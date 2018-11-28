@@ -107,6 +107,10 @@ varying vec2 vtexcoord;
 varying vec3 vnormal;
 void main() {
   float shadow = 0.5 + 0.5 * dot(normalize(vnormal), vec3(0.48, 0.64, 0.6));
+  shadow =
+  (1.0 - 1.0 / (1.0 + exp(32.0 * (shadow - 0.5)))) * 0.5 +
+  (1.0 - 1.0 / (1.0 + exp(32.0 * (shadow - 0.75)))) * 0.5 ;
+  shadow = 0.2 + 0.8 * shadow;
   gl_FragColor.rgb = texture2D(map, vtexcoord).rgb * shadow;
 }
 `

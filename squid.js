@@ -135,9 +135,9 @@ class Squid {
         const dz = pb.z - pa.z
         const l = Math.sqrt(dx**2 + dy**2 + dz**2)
         const dotv = (pb.vx - pa.vx) * dx + (pb.vy - pa.vy) * dy + (pb.vz - pa.vz) * dz
-        const fx = ((l - l0) * dx / l / 32 + dotv * dx / l / 32) / l0 / l0
-        const fy = ((l - l0) * dy / l / 32 + dotv * dy / l / 32) / l0 / l0
-        const fz = ((l - l0) * dz / l / 32 + dotv * dz / l / 32) / l0 / l0
+        const fx = ((l - l0) * dx / l + dotv * dx / l) / l0 / 64
+        const fy = ((l - l0) * dy / l + dotv * dy / l) / l0 / 64
+        const fz = ((l - l0) * dz / l + dotv * dz / l) / l0 / 64
         pa.fx += fx
         pa.fy += fy
         pa.fz += fz
@@ -155,8 +155,13 @@ class Squid {
       p.z += p.vz * dt
       p.vx += p.fx * dt
       p.vy += p.fy * dt
-      p.vz += p.fz * dt - 0.02 * dt
-      if (p.z < 0) p.z = p.vz = 0
+      p.vz += p.fz * dt - 0.05 * dt
+      if (p.z < 0) {
+        p.z = 0
+        if (p.vz < 0) p.vz = -0.5 * p.vz
+        p.vx *= 0.9
+        p.vy *= 0.9
+      }
     })
     this.calculateJellyXYZ()
     this.updateMorph()
@@ -166,6 +171,9 @@ class Squid {
     const b = 4 * Math.sin(t)
     const cosrot = Math.cos(t * 0.2 + 0.5)
     const sinrot = Math.sin(t * 0.2 + 0.5)
+
+    const cosrot2 = Math.cos(t * 0.3 + 0.7)
+    const sinrot2 = Math.sin(t * 0.3 + 0.7)
     this.eachCoord((i, j, k) => {
       const p = this.jelly[i][j][k]
       p.x = this.xysize * (i - this.step / 2) + 0.1 * Math.sin(3 * p.x - 4 * t)
@@ -174,7 +182,12 @@ class Squid {
       const px = p.x * cosrot + p.z * sinrot
       const pz = p.z * cosrot - p.x * sinrot
       p.x = px
-      p.z = pz + 2
+      p.z = pz
+      const py2 = p.y * cosrot2 + p.z * sinrot2
+      const pz2 = p.z * cosrot2 - p.y * sinrot2
+      p.y = py2
+      p.z = pz2
+      p.z += 2
       p.vx = p.vy = p.vz = 0
     })
   }
