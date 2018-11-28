@@ -124,34 +124,29 @@ class Squid {
       const p = this.jelly[i][j][k]
       p.fx = p.fy = p.fz = 0
     })
-    for (let i = 0; i < this.step; i++) {
-      for (let j = 0; j < this.step; j++) {
-        for (let a=0;a<8;a++) for (let b=a+1;b<8;b++) {
-          const ia = i+((a>>2)&1)
-          const ib = i+((b>>2)&1)
-          const ja = j+((a>>1)&1)
-          const jb = j+((b>>1)&1)
-          const ka = a&1
-          const kb = b&1
-          const pa = this.jelly[ia][ja][ka]
-          const pb = this.jelly[ib][jb][kb]
-          const l0 = Math.sqrt((this.xysize*(ia-ib))**2 + (this.xysize*(ja-jb))**2 + (this.zsize*(ka-kb))**2)
-          const dx = pb.x-pa.x
-          const dy = pb.y-pa.y
-          const dz = pb.z-pa.z
-          const l = Math.sqrt(dx**2 + dy**2 + dz**2)
-          const fx = (l-l0) * dx / l + (pb.vx - pa.vx) / 8
-          const fy = (l-l0) * dy / l + (pb.vy - pa.vy) / 8
-          const fz = (l-l0) * dz / l + (pb.vz - pa.vz) / 8
-          pa.fx += fx
-          pa.fy += fy
-          pa.fz += fz
-          pb.fx -= fx
-          pb.fy -= fy
-          pb.fz -= fz
-        }
-      }
-    }
+    this.eachCoord((ia,ja,ka) => {
+      this.eachCoord((ib,jb,kb) => {
+        const pa = this.jelly[ia][ja][ka]
+        const pb = this.jelly[ib][jb][kb]
+        if (pa === pb) return
+        const l0 = Math.sqrt((this.xysize*(ia-ib))**2 + (this.xysize*(ja-jb))**2 + (this.zsize*(ka-kb))**2)
+        const dx = pb.x - pa.x
+        const dy = pb.y - pa.y
+        const dz = pb.z - pa.z
+        const l = Math.sqrt(dx**2 + dy**2 + dz**2)
+        const dotv = (pb.vx - pa.vx) * dx + (pb.vy - pa.vy) * dy + (pb.vz - pa.vz) * dz
+        const fx = ((l - l0) * dx / l / 32 + dotv * dx / l / 32) / l0 / l0
+        const fy = ((l - l0) * dy / l / 32 + dotv * dy / l / 32) / l0 / l0
+        const fz = ((l - l0) * dz / l / 32 + dotv * dz / l / 32) / l0 / l0
+        pa.fx += fx
+        pa.fy += fy
+        pa.fz += fz
+        pb.fx -= fx
+        pb.fy -= fy
+        pb.fz -= fz
+      })
+    })
+
     const dt = 0.1
     this.eachCoord((i, j, k) => {
       const p = this.jelly[i][j][k]

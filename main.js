@@ -94,13 +94,23 @@ window.addEventListener('load', () => {
   const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
   directionalLight.position.set(1, 2, 3)
   scene.add(directionalLight)
+  document.body.onclick = () => {
+    squid.rotateJelly(100 * Math.random())
+    squid.calculateJellyXYZ()
+    squid.updateMorph()
+  }
   function animate() {
     const t = performance.now() / 1000
     const zcos = Math.cos(0.24 * t)
     const zsin = Math.sin(0.24 * t)
     squid.updateJelly()
-    camera.position.set(4 * Math.cos(0.2 * t) * zsin * 0, 4 * Math.sin(0.2 * t) * zsin*0-4, 1)
-    camera.lookAt(0, 0, 0)
+
+    // squid.rotateJelly(t)
+    // squid.calculateJellyXYZ()
+    // squid.updateMorph()
+
+    camera.position.set(4 * Math.cos(0.2 * t) * zsin * 0, 4 * Math.sin(0.2 * t) * zsin*0-4, 4)
+    camera.lookAt(0, 0, 1)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
   }
