@@ -208,6 +208,23 @@ class Squid {
       p.yz = this.jelly[i][j][1].y - this.jelly[i][j][0].y
       p.zz = this.jelly[i][j][1].z - this.jelly[i][j][0].z
     })
+    for (let n = 0; n < 8; n++) {
+      this.eachCoord((i, j, k) => {
+        const ia = i === 0 ? 0 : i - 1
+        const ib = i === this.step ? this.step : i + 1
+        const ja = j === 0 ? 0 : j - 1
+        const jb = j === this.step ? this.step : j + 1
+        const p = this.jelly[i][j][k]
+        const ki = ia === i || ib === i ? 2 : 4
+        const kj = ja === j || jb === j ? 2 : 4
+        p.xx = (3 * (this.jelly[ib][j][k].x - this.jelly[ia][j][k].x) - this.jelly[ib][j][k].xx - this.jelly[ia][j][k].xx) / ki
+        p.yx = (3 * (this.jelly[ib][j][k].y - this.jelly[ia][j][k].y) - this.jelly[ib][j][k].yx - this.jelly[ia][j][k].yx) / ki
+        p.zx = (3 * (this.jelly[ib][j][k].z - this.jelly[ia][j][k].z) - this.jelly[ib][j][k].zx - this.jelly[ia][j][k].zx) / ki
+        p.xy = (3 * (this.jelly[i][jb][k].x - this.jelly[i][ja][k].x) - this.jelly[i][jb][k].xy - this.jelly[i][ja][k].xy) / kj
+        p.yy = (3 * (this.jelly[i][jb][k].y - this.jelly[i][ja][k].y) - this.jelly[i][jb][k].yy - this.jelly[i][ja][k].yy) / kj
+        p.zy = (3 * (this.jelly[i][jb][k].z - this.jelly[i][ja][k].z) - this.jelly[i][jb][k].zy - this.jelly[i][ja][k].zy) / kj
+      })
+    }
   }
   initializeJelly() {
     this.jelly = []
