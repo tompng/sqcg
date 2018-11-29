@@ -1,5 +1,6 @@
 const ikaTriangles = coordsShrink3D()
-const ikaSections = createIkaSections(8)
+const numSections = 5
+const ikaSections = createIkaSections(numSections)
 function createIkaSections(step) {
   const sections = []
   for (let i = 0; i < step; i++) {
@@ -135,9 +136,9 @@ class Squid {
         const dz = pb.z - pa.z
         const l = Math.sqrt(dx**2 + dy**2 + dz**2)
         const dotv = (pb.vx - pa.vx) * dx + (pb.vy - pa.vy) * dy + (pb.vz - pa.vz) * dz
-        const fx = ((l - l0) * dx / l + dotv * dx / l) / l0 / 64
-        const fy = ((l - l0) * dy / l + dotv * dy / l) / l0 / 64
-        const fz = ((l - l0) * dz / l + dotv * dz / l) / l0 / 64
+        const fx = ((l - l0) * dx / l + dotv * dx / l) / l0 / numSections / numSections
+        const fy = ((l - l0) * dy / l + dotv * dy / l) / l0 / numSections / numSections
+        const fz = ((l - l0) * dz / l + dotv * dz / l) / l0 / numSections / numSections
         pa.fx += fx
         pa.fy += fy
         pa.fz += fz

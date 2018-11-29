@@ -84,7 +84,7 @@ window.addEventListener('load', () => {
 
   const texture = new THREE.Texture(texcanvas)
   texture.needsUpdate = true
-  const squid = new Squid(ikaSections, 8, texture)
+  const squid = new Squid(ikaSections, numSections, texture)
   window.squid = squid
   scene.add(squid.meshGroup)
   const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(), new THREE.MeshPhongMaterial())
