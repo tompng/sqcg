@@ -163,65 +163,81 @@ function geometryFromIkaSection(section) {
 }
 
 
-const sphereGeometry = new THREE.SphereBufferGeometry(1, 4)
+const sphereGeometry = new THREE.SphereBufferGeometry()
 class Squid {
-  constructor(sections, step, texture) {
+  constructor(sections, step, texture, option) {
     this.xysize = sections[0].size
     this.zsize = 1
     this.step = step
     this.texture = texture
-    this.initializeMesh(sections)
+    this.initializeMesh(sections, option || {})
     this.initializeJelly()
     this.rotateJelly(0)
     this.calculateJellyXYZ()
     this.updateMorph()
   }
-  initializeMesh(sections) {
+  initializeMesh(sections, { hitSphereEnabled = true, wireEnabled = true }) {
     this.meshGroup = new THREE.Group()
     this.sections = sections.map(section => {
       const material = ikaShader({ map: { value: this.texture } })
       const mesh = new THREE.Mesh(section.geometry, material)
       const wireMesh = new THREE.Mesh(wireCubeGeometry, material)
       const spheres = section.spheres.map(s => {
-        const mesh = new THREE.Mesh(sphereGeometry)
-        mesh.scale.set(s.r, s.r, s.r)
-        this.meshGroup.add(mesh)
-        return { base: s, mesh }
+        let mesh
+        if (hitSphereEnabled) {
+          mesh = new THREE.Mesh(sphereGeometry)
+          mesh.scale.set(s.r, s.r, s.r)
+          this.meshGroup.add(mesh)
+        }
+        return { base: { x: s.x, y: s.y, z: s.z }, r: s.r, mesh }
       })
-      this.meshGroup.add(mesh, wireMesh)
+      this.meshGroup.add(mesh)
+      if (wireEnabled) this.meshGroup.add(wireMesh)
       return { ...section, material, spheres }
     })
   }
   transform(sec, p) {
-    const a1 = {
-      x: p.x * p.x * (3 - 2 * p.x),
-      y: p.y * p.y * (3 - 2 * p.y),
-      z: p.z * p.z * (3 - 2 * p.z)
-    }
-    const a0 = { x: 1 - a1.x, y: 1 - a1.y, z: 1 - a1.z }
-    const b0 = {
-      x: p.x * (1 - p.x) * (1 - p.x),
-      y: p.y * (1 - p.y) * (1 - p.y),
-      z: p.z * (1 - p.z) * (1 - p.z)
-    }
-    const b1 = {
-      x: p.x * p.x * (p.x - 1),
-      y: p.y * p.y * (p.y - 1),
-      z: p.z * p.z * (p.z - 1)
-    }
+    const a1x = p.x * p.x * (3 - 2 * p.x)
+    const a1y = p.y * p.y * (3 - 2 * p.y)
+    const a1z = p.z * p.z * (3 - 2 * p.z)
+    const a0x = 1 - a1x
+    const a0y = 1 - a1y
+    const a0z = 1 - a1z
+    const b0x = p.x * (1 - p.x) * (1 - p.x)
+    const b0y = p.y * (1 - p.y) * (1 - p.y)
+    const b0z = p.z * (1 - p.z) * (1 - p.z)
+    const b1x = p.x * p.x * (p.x - 1)
+    const b1y = p.y * p.y * (p.y - 1)
+    const b1z = p.z * p.z * (p.z - 1)
     const out = { x: 0, y: 0, z: 0 }
-    this.eachBin3D((i, j, k) => {
+    let x = 0
+    let y = 0
+    let z = 0
+    for (let ijk = 0; ijk < 8; ijk++) {
+      const i = ijk & 1
+      const j = (ijk >> 1) & 1
+      const k = (ijk >> 2) & 1
       const v = this.jelly[sec.i + i][sec.j + j][k]
-      for (const key of ['x', 'y', 'z']) {
-        out[key] += (
-          v[key] * (i === 0 ? a0.x : a1.x) * (j === 0 ? a0.y : a1.y) * (k === 0 ? a0.z : a1.z)
-          + v[key + 'x'] * (i === 0 ? b0.x : b1.x) * (j === 0 ? a0.y : a1.y) * (k === 0 ? a0.z : a1.z)
-          + v[key + 'y'] * (i === 0 ? a0.x : a1.x) * (j === 0 ? b0.y : b1.y) * (k === 0 ? a0.z : a1.z)
-          + v[key + 'z'] * (i === 0 ? a0.x : a1.x) * (j === 0 ? a0.y : a1.y) * (k === 0 ? b0.z : b1.z)
-        )
-      }
-    })
-    return out
+      x += (
+        v.x * (i === 0 ? a0x : a1x) * (j === 0 ? a0y : a1y) * (k === 0 ? a0z : a1z)
+        + v.xx * (i === 0 ? b0x : b1x) * (j === 0 ? a0y : a1y) * (k === 0 ? a0z : a1z)
+        + v.xy * (i === 0 ? a0x : a1x) * (j === 0 ? b0y : b1y) * (k === 0 ? a0z : a1z)
+        + v.xz * (i === 0 ? a0x : a1x) * (j === 0 ? a0y : a1y) * (k === 0 ? b0z : b1z)
+      )
+      y += (
+        v.y * (i === 0 ? a0x : a1x) * (j === 0 ? a0y : a1y) * (k === 0 ? a0z : a1z)
+        + v.yx * (i === 0 ? b0x : b1x) * (j === 0 ? a0y : a1y) * (k === 0 ? a0z : a1z)
+        + v.yy * (i === 0 ? a0x : a1x) * (j === 0 ? b0y : b1y) * (k === 0 ? a0z : a1z)
+        + v.yz * (i === 0 ? a0x : a1x) * (j === 0 ? a0y : a1y) * (k === 0 ? b0z : b1z)
+      )
+      z += (
+        v.z * (i === 0 ? a0x : a1x) * (j === 0 ? a0y : a1y) * (k === 0 ? a0z : a1z)
+        + v.zx * (i === 0 ? b0x : b1x) * (j === 0 ? a0y : a1y) * (k === 0 ? a0z : a1z)
+        + v.zy * (i === 0 ? a0x : a1x) * (j === 0 ? b0y : b1y) * (k === 0 ? a0z : a1z)
+        + v.zz * (i === 0 ? a0x : a1x) * (j === 0 ? a0y : a1y) * (k === 0 ? b0z : b1z)
+      )
+    }
+    return { x, y, z }
   }
   eachBin3D(f) {
     for (let i = 0; i < 8; i++) f((i >> 2) & 1, (i >> 1) & 1, i & 1)
@@ -233,7 +249,10 @@ class Squid {
       const uniforms = {}
       for (const sphere of sec.spheres) {
         const p = this.transform(sec, sphere.base)
-        sphere.mesh.position.set(p.x, p.y, p.z)
+        sphere.x = p.x
+        sphere.y = p.y
+        sphere.z = p.z
+        if (sphere.mesh) sphere.mesh.position.set(p.x, p.y, p.z)
       }
       this.eachBin3D((x,y,z) => {
         const v = this.jelly[i + x][j + y][z]

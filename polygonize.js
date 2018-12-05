@@ -18,6 +18,9 @@ function coordsShrink3D() {
       }
     })
   }
+  function zreverse(z) {
+    return Math.atan(-8 * z) / 8
+  }
   function smooth(coords, pow) {
     for (let i = 0; i < pow; i++) {
       const c = Math.min(1, pow - i) / 2
@@ -81,7 +84,7 @@ function coordsShrink3D() {
       return {
         x: p.x,
         y: p.y,
-        z: Math.atan(-8 * p.z) / 8
+        z: zreverse(p.z)
       }
     }).reverse())
   }
@@ -115,17 +118,23 @@ function coordsShrink3D() {
     }
   }
   const spheres = []
+  const sphereR = 0.15
   zcoords.forEach((zc, i) => {
-    const { coords, z } = zc
     if (i === 0 || i % 2 !== 0) return
-    coords.forEach((p, j) => {
+    zc.coords.forEach((p, j) => {
       if (j % 4 !== 0) return
-      spheres.push({ x: p.x, y: p.y, z: z, r: 0.02 })
+      for (const z of [zc.z, zreverse(zc.z)]) {
+        const norm = pointNormals[[p.x, p.y, z]]
+        const nr = Math.sqrt(norm.x ** 2 + norm.y ** 2 + norm.z ** 2)
+        spheres.push({ x: p.x - sphereR * norm.x / nr, y: p.y - sphereR * norm.y / nr, z: z - sphereR * norm.z / nr, r: sphereR })
+      }
     })
   })
   coords.forEach((c, i) => {
     if (i % 4 !== 0) return
-    spheres.push({ x: c.x, y: c.y, z: 0, r: 0.02 })
+    const norm = pointNormals[[c.x, c.y, 0]]
+    const nr = Math.sqrt(norm.x ** 2 + norm.y ** 2 + norm.z ** 2)
+    spheres.push({ x: c.x - sphereR * norm.x / nr, y: c.y - sphereR * norm.y / nr, z: 0, r: sphereR })
   })
   let zmin = 0, zmax = 0
   for (const tri of triangles) {
@@ -138,6 +147,7 @@ function coordsShrink3D() {
   for (const tri of triangles) {
     for (const p of tri) p.z += 0.5 - (zmin + zmax) / 2
   }
+  console.error(spheres.length)
   return { triangles, spheres }
 }
 
