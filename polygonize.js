@@ -83,9 +83,6 @@ function coordsShrink3D() {
       }
     }).reverse())
   }
-  for (const tri of triangles) {
-    for (const p of tri) p.z += 0.2
-  }
   const pointNormals = {}
   for (const tri of triangles) {
     const [a, b, c] = tri
@@ -114,6 +111,16 @@ function coordsShrink3D() {
       p.ny = norm.y / nr
       p.nz = norm.z / nr
     }
+  }
+  let zmin = 0, zmax = 0
+  for (const tri of triangles) {
+    for (const p of tri) {
+      if (zmax < p.z) zmax = p.z
+      if (p.z < zmin) zmin = p.z
+    }
+  }
+  for (const tri of triangles) {
+    for (const p of tri) p.z += 0.5 - (zmin + zmax) / 2
   }
   return triangles
 }
@@ -168,11 +175,6 @@ function trimTriangles(triangles, xmin, ymin, size) {
   }
   return out.map(tri => {
     return tri.map(p => {
-      window.aaa = window.aaa || p.z
-      window.bbb = window.bbb || p.z
-      if (window.aaa < p.z) window.aaa = p.z
-      if (window.bbb > p.z) window.bbb = p.z
-      0.25 + p.z
       const zscale = size
       const nr = Math.sqrt(p.nx ** 2 + p.ny ** 2 + (p.nz / size) ** 2)
       return {
@@ -181,7 +183,7 @@ function trimTriangles(triangles, xmin, ymin, size) {
         nz: p.nz / size / nr,
         x: (p.x - xmin) / size,
         y: (p.y - ymin) / size,
-        z: 0.25 + p.z
+        z: p.z
       }
     })
   })
