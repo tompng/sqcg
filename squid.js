@@ -1,4 +1,4 @@
-const ikaTriangles = coordsShrink3D()
+const ikaShape = coordsShrink3D()
 const numSections = 5
 const wireCubeGeometry = createWireCubeGeometry()
 const ikaSections = createIkaSections(numSections)
@@ -9,9 +9,14 @@ function createIkaSections(step) {
       const xmin = (2 * i / step - 1) * 1.3 + 0.3
       const ymin = (2 * j / step - 1) * 1.3
       const size = 1.3 * 2 / step
-      const tris = trimTriangles(ikaTriangles, xmin, ymin, size)
-      if (!tris.length) continue
-      const sec = { triangles: tris, xmin, ymin, size, i, j }
+      const triangles = trimTriangles(ikaShape.triangles, xmin, ymin, size)
+      const spheres = ikaShape.spheres.filter(s => {
+        return xmin <= s.x && s.x < xmin + size && ymin <= s.y && s.y < ymin + size
+      }).map(s => {
+        return { x: (s.x - xmin) / size, y: (s.y - ymin) / size, z: s.z, r: s.r }
+      })
+      if (!triangles.length) continue
+      const sec = { triangles, xmin, ymin, size, i, j, spheres }
       sec.geometry = geometryFromIkaSection(sec)
       sections.push(sec)
     }
@@ -158,7 +163,7 @@ function geometryFromIkaSection(section) {
 }
 
 
-
+const sphereGeometry = new THREE.SphereBufferGeometry(1, 4)
 class Squid {
   constructor(sections, step, texture) {
     this.xysize = sections[0].size
@@ -177,19 +182,60 @@ class Squid {
       const material = ikaShader({ map: { value: this.texture } })
       const mesh = new THREE.Mesh(section.geometry, material)
       const wireMesh = new THREE.Mesh(wireCubeGeometry, material)
+      const spheres = section.spheres.map(s => {
+        const mesh = new THREE.Mesh(sphereGeometry)
+        mesh.scale.set(s.r, s.r, s.r)
+        this.meshGroup.add(mesh)
+        return { base: s, mesh }
+      })
       this.meshGroup.add(mesh, wireMesh)
-      return { ...section, material }
+      return { ...section, material, spheres }
     })
   }
-  updateMorph() {
-    function each3(f) {
-      for (let i = 0; i < 8; i++) f((i >> 2) & 1, (i >> 1) & 1, i & 1)
+  transform(sec, p) {
+    const a1 = {
+      x: p.x * p.x * (3 - 2 * p.x),
+      y: p.y * p.y * (3 - 2 * p.y),
+      z: p.z * p.z * (3 - 2 * p.z)
     }
+    const a0 = { x: 1 - a1.x, y: 1 - a1.y, z: 1 - a1.z }
+    const b0 = {
+      x: p.x * (1 - p.x) * (1 - p.x),
+      y: p.y * (1 - p.y) * (1 - p.y),
+      z: p.z * (1 - p.z) * (1 - p.z)
+    }
+    const b1 = {
+      x: p.x * p.x * (p.x - 1),
+      y: p.y * p.y * (p.y - 1),
+      z: p.z * p.z * (p.z - 1)
+    }
+    const out = { x: 0, y: 0, z: 0 }
+    this.eachBin3D((i, j, k) => {
+      const v = this.jelly[sec.i + i][sec.j + j][k]
+      for (const key of ['x', 'y', 'z']) {
+        out[key] += (
+          v[key] * (i === 0 ? a0.x : a1.x) * (j === 0 ? a0.y : a1.y) * (k === 0 ? a0.z : a1.z)
+          + v[key + 'x'] * (i === 0 ? b0.x : b1.x) * (j === 0 ? a0.y : a1.y) * (k === 0 ? a0.z : a1.z)
+          + v[key + 'y'] * (i === 0 ? a0.x : a1.x) * (j === 0 ? b0.y : b1.y) * (k === 0 ? a0.z : a1.z)
+          + v[key + 'z'] * (i === 0 ? a0.x : a1.x) * (j === 0 ? a0.y : a1.y) * (k === 0 ? b0.z : b1.z)
+        )
+      }
+    })
+    return out
+  }
+  eachBin3D(f) {
+    for (let i = 0; i < 8; i++) f((i >> 2) & 1, (i >> 1) & 1, i & 1)
+  }
+  updateMorph() {
     for (const sec of this.sections) {
       const i = sec.i
       const j = sec.j
       const uniforms = {}
-      each3((x,y,z) => {
+      for (const sphere of sec.spheres) {
+        const p = this.transform(sec, sphere.base)
+        sphere.mesh.position.set(p.x, p.y, p.z)
+      }
+      this.eachBin3D((x,y,z) => {
         const v = this.jelly[i + x][j + y][z]
         sec.material.uniforms['v' + x + y + z] = { value: new THREE.Vector3(v.x, v.y, v.z) }
         sec.material.uniforms['vx' + x + y + z] = { value: new THREE.Vector3(v.xx, v.yx, v.zx) }

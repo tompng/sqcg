@@ -52,6 +52,7 @@ function coordsShrink3D() {
     const t = i / 18
     return (1 - (1 - t) ** 3) / 3
   }
+  const zcoords = [{ z: 0, coords: coords }]
   let tmpcoords = coords
   for(let i = 0; i < 16; i++) {
     const sh = 0.1 * (i + 1) / 16
@@ -60,6 +61,7 @@ function coordsShrink3D() {
     tmpcoords = replotCoords(tmpcoords, 0.04)
     tmpcoords = smooth(tmpcoords, i)
     fill(coordsWas, tmpcoords, zfunc(i), zfunc(i + 1))
+    zcoords.push({ coords: tmpcoords, z: zfunc(i + 1) })
   }
   const center = { x: 0, y: 0 }
   tmpcoords.forEach(p => {
@@ -112,6 +114,19 @@ function coordsShrink3D() {
       p.nz = norm.z / nr
     }
   }
+  const spheres = []
+  zcoords.forEach((zc, i) => {
+    const { coords, z } = zc
+    if (i === 0 || i % 2 !== 0) return
+    coords.forEach((p, j) => {
+      if (j % 4 !== 0) return
+      spheres.push({ x: p.x, y: p.y, z: z, r: 0.02 })
+    })
+  })
+  coords.forEach((c, i) => {
+    if (i % 4 !== 0) return
+    spheres.push({ x: c.x, y: c.y, z: 0, r: 0.02 })
+  })
   let zmin = 0, zmax = 0
   for (const tri of triangles) {
     for (const p of tri) {
@@ -119,10 +134,11 @@ function coordsShrink3D() {
       if (p.z < zmin) zmin = p.z
     }
   }
+  for (const s of spheres) s.z += 0.5 - (zmin + zmax) / 2
   for (const tri of triangles) {
     for (const p of tri) p.z += 0.5 - (zmin + zmax) / 2
   }
-  return triangles
+  return { triangles, spheres }
 }
 
 function trimTriangles(triangles, xmin, ymin, size) {
@@ -175,7 +191,6 @@ function trimTriangles(triangles, xmin, ymin, size) {
   }
   return out.map(tri => {
     return tri.map(p => {
-      const zscale = size
       const nr = Math.sqrt(p.nx ** 2 + p.ny ** 2 + (p.nz / size) ** 2)
       return {
         nx: p.nx / nr,
