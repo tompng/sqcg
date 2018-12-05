@@ -83,6 +83,9 @@ function coordsShrink3D() {
       }
     }).reverse())
   }
+  for (const tri of triangles) {
+    for (const p of tri) p.z += 0.2
+  }
   const pointNormals = {}
   for (const tri of triangles) {
     const [a, b, c] = tri

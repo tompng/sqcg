@@ -1,5 +1,6 @@
 const ikaTriangles = coordsShrink3D()
 const numSections = 5
+const wireCubeGeometry = createWireCubeGeometry()
 const ikaSections = createIkaSections(numSections)
 function createIkaSections(step) {
   const sections = []
@@ -16,6 +17,91 @@ function createIkaSections(step) {
     }
   }
   return sections
+}
+
+function createWireCubeGeometry(n = 16, s = 0.02) {
+  const vertices = []
+  const normals = []
+  const tan1 = []
+  const tan2 = []
+  const uvs = []
+  const indices = []
+  pipe(0, 0, 0, 1, s, s)
+  pipe(0, 0, 0, s, 1, s)
+  pipe(0, 0, 0, s, s, 1)
+  pipe(1 - s, 0, 0, s, s, 1)
+  pipe(1 - s, 0, 0, s, 1, s)
+  pipe(0, 1 - s, 0, 1, s, s)
+  pipe(0, 1 - s, 0, s, s, 1)
+  pipe(0, 0, 1 - s, s, 1, s)
+  pipe(0, 0, 1 - s, 1, s, s)
+  pipe(0, 1 - s, 1 - s, 1, s, s)
+  pipe(1 - s, 0, 1 - s, s, 1, s)
+  pipe(1 - s, 1 - s, 0, s, s, 1)
+  function pipe(x, y, z, sx, sy, sz) {
+    const smax = Math.max(sx, sy, sz)
+    const offset = 0.05
+    const coord000 = { x, y, z }
+    const coord111 = { x: x + sx, y: y + sy, z: z + sz }
+    const faces = [
+      { ...coord000, u: { x: 1, y: 0, z: 0 }, v: { x: 0, y: 1, z: 0 } },
+      { ...coord000, u: { x: 0, y: 1, z: 0 }, v: { x: 0, y: 0, z: 1 } },
+      { ...coord000, u: { x: 0, y: 0, z: 1 }, v: { x: 1, y: 0, z: 0 } },
+      { ...coord111, u: { x: 0, y: -1, z: 0 }, v: { x: -1, y: 0, z: 0 } },
+      { ...coord111, u: { x: 0, y: 0, z: -1 }, v: { x: 0, y: -1, z: 0 } },
+      { ...coord111, u: { x: -1, y: 0, z: 0 }, v: { x: 0, y: 0, z: -1 } },
+    ]
+    for (const face of faces) {
+      const normal = {
+        x: face.u.y * face.v.z - face.u.z * face.v.y,
+        y: face.u.z * face.v.x - face.u.x * face.v.z,
+        z: face.u.x * face.v.y - face.u.y * face.v.x
+      }
+      const point = (s, t) => {
+        const x = face.x + sx * (face.u.x * s + face.v.x * t)
+        const y = face.y + sy * (face.u.y * s + face.v.y * t)
+        const z = face.z + sz * (face.u.z * s + face.v.z * t)
+        return { s, t, x, y, z }
+      }
+      const ni = smax === Math.abs(face.u.x * sx + face.u.y * sy + face.u.z * sz) ? n : 1
+      const nj = smax === Math.abs(face.v.x * sx + face.v.y * sy + face.v.z * sz) ? n : 1
+      const idcmap = {}
+      for (let i = 0; i < ni; i++) {
+        for (let j = 0; j < nj; j++) {
+          const s0 = i / ni
+          const s1 = (i + 1) / ni
+          const t0 = j / nj
+          const t1 = (j + 1) / nj
+          const p00 = point(s0, t0)
+          const p01 = point(s0, t1)
+          const p10 = point(s1, t0)
+          const p11 = point(s1, t1)
+          for (let p of [p00, p01, p11, p00, p11, p10]) {
+            const key = [p.s, p.t]
+            if (idcmap[key] !== undefined) {
+              indices.push(idcmap[key])
+              continue
+            }
+            const index = idcmap[key] = vertices.length / 3
+            indices.push(index)
+            normals.push(normal.x, normal.y, normal.z)
+            tan1.push(face.u.x, face.u.y, face.u.z)
+            tan2.push(face.v.x, face.v.y, face.v.z)
+            vertices.push(p.x, p.y, p.z)
+            uvs.push(0, 0)
+          }
+        }
+      }
+    }
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.addAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3))
+  geometry.addAttribute('normal', new THREE.BufferAttribute(new Float32Array(normals), 3))
+  geometry.addAttribute('tan1', new THREE.BufferAttribute(new Float32Array(tan1), 3))
+  geometry.addAttribute('tan2', new THREE.BufferAttribute(new Float32Array(tan2), 3))
+  geometry.addAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2))
+  geometry.setIndex(new THREE.BufferAttribute(new Uint16Array(indices), 1))
+  return geometry
 }
 
 function geometryFromIkaSection(section) {
@@ -90,8 +176,9 @@ class Squid {
     this.sections = sections.map(section => {
       const material = ikaShader({ map: { value: this.texture } })
       const mesh = new THREE.Mesh(section.geometry, material)
-      this.meshGroup.add(mesh)
-      return { ...section, mesh, material}
+      const wireMesh = new THREE.Mesh(wireCubeGeometry, material)
+      this.meshGroup.add(mesh, wireMesh)
+      return { ...section, material }
     })
   }
   updateMorph() {
