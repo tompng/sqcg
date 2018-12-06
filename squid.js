@@ -406,18 +406,19 @@ class Squid {
   static hitBoth(sq1, sq2) {
     const map = {}
     const r = sq1.spheres[0].r
-    const seg = 2 * r
+    const seg = 4 * r
     sq1.spheres.forEach(s => {
       const key = [Math.floor(s.x / seg), Math.floor(s.y / seg), Math.floor(s.z / seg)]
       ;(map[key] = map[key] || []).push(s)
     })
     let cnt1 = 0, cnt2 = 0
     sq2.spheres.forEach(s => {
-      const sx = Math.floor(s.x / seg)
-      const sy = Math.floor(s.y / seg)
-      const sz = Math.floor(s.z / seg)
-      for (let i = 0; i < 27; i++) {
-        const key = [sx + i % 3 * 2 - 1, sy + Math.floor(i / 3) % 3 * 2 - 1, sz + Math.floor(i / 9) % 3 * 2 - 1]
+      const sx = Math.floor(s.x / seg - 0.5)
+      const sy = Math.floor(s.y / seg - 0.5)
+      const sz = Math.floor(s.z / seg - 0.5)
+      let nearest, dist2
+      for (let i = 0; i < 8; i++) {
+        const key = [sx + (i & 1), sy + ((i >> 1) & 1), sz + ((i >> 2) & 1)]
         const targets = map[key]
         if (!targets) continue
         for (const s2 of targets) {
@@ -426,30 +427,41 @@ class Squid {
           const dz = s2.z - s.z
           const dr2 = dx * dx + dy * dy + dz * dz
           cnt1 ++
-          if (dr2 > seg * seg) continue
-          cnt2 ++
-          const dr = Math.sqrt(dr2)
-          const dvx = s2.vx - s.vx
-          const dvy = s2.vy - s.vy
-          const dvz = s2.vz - s.vz
-          const dotv = dx * dvx + dy * dvy + dz * dvz
-          const nvx = dvx - dotv * dx / dr2
-          const nvy = dvy - dotv * dy / dr2
-          const nvz = dvz - dotv * dz / dr2
-          const fd = (dr - seg) * 2
-          const fn = 0.25
-          const fx = fd * dx / dr + fn * nvx
-          const fy = fd * dy / dr + fn * nvy
-          const fz = fd * dz / dr + fn * nvz
-          s.fx += fx
-          s.fy += fy
-          s.fz += fz
-          s2.fx -= fx
-          s2.fy -= fy
-          s2.fz -= fz
+          if (dr2 > 4 * r * r) continue
+          if (!nearest || dr2 < dist2) {
+            nearest = s2
+            dist2 = dr2
+          }
         }
       }
+      if (!nearest) return
+      const s2 = nearest
+      const dx = s2.x - s.x
+      const dy = s2.y - s.y
+      const dz = s2.z - s.z
+      const dr2 = dx * dx + dy * dy + dz * dz
+      const dr = Math.sqrt(dr2)
+      const dvx = s2.vx - s.vx
+      const dvy = s2.vy - s.vy
+      const dvz = s2.vz - s.vz
+      const dotv = dx * dvx + dy * dvy + dz * dvz
+      const nvx = dvx - dotv * dx / dr2
+      const nvy = dvy - dotv * dy / dr2
+      const nvz = dvz - dotv * dz / dr2
+      const fd = dr - 2 * r
+      const fn = 0.25
+      const fx = fd * dx / dr + fn * nvx
+      const fy = fd * dy / dr + fn * nvy
+      const fz = fd * dz / dr + fn * nvz
+      s.fx += fx
+      s.fy += fy
+      s.fz += fz
+      s2.fx -= fx
+      s2.fy -= fy
+      s2.fz -= fz
     })
+    if (!window.aaa || window.aaa < cnt1) window.aaa = cnt1
+    if (!window.bbb || window.bbb < cnt2) window.bbb = cnt2
     window.cnt = [cnt1, cnt2]
   }
   setPosition(p) {
