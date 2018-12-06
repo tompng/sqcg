@@ -87,10 +87,10 @@ window.addEventListener('load', () => {
   const squid = new Squid(ikaSections, numSections, texture)
   window.squid = squid
   scene.add(squid.meshGroup)
-  const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(), new THREE.MeshPhongMaterial())
+  const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial)
   plane.position.set(0, 0, 0)
   plane.scale.set(3, 3, 3)
-  // scene.add(plane)
+  scene.add(plane)
   const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
   directionalLight.position.set(1, 2, 3)
   scene.add(directionalLight)
@@ -109,7 +109,7 @@ window.addEventListener('load', () => {
     // squid.calculateJellyXYZ()
     // squid.updateMorph()
 
-    camera.position.set(4 * Math.cos(0.2 * t) * zsin * 0, 4 * Math.sin(0.2 * t) * zsin*0-4, 4)
+    camera.position.set(4 * Math.cos(0.2 * t) * zsin * 0, 4 * Math.sin(0.2 * t) * zsin*0-5, 1.1)
     camera.lookAt(0, 0, 1)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)

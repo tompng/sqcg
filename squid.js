@@ -163,7 +163,7 @@ function geometryFromIkaSection(section) {
 }
 
 
-const sphereGeometry = new THREE.SphereBufferGeometry()
+const sphereGeometry = new THREE.SphereBufferGeometry(1, 32)
 class Squid {
   constructor(sections, step, texture, option) {
     this.xysize = sections[0].size
@@ -178,6 +178,7 @@ class Squid {
   }
   initializeMesh(sections, { hitSphereEnabled = true, wireEnabled = true }) {
     this.meshGroup = new THREE.Group()
+    this.spheres = []
     this.sections = sections.map(section => {
       const material = ikaShader({ map: { value: this.texture } })
       const mesh = new THREE.Mesh(section.geometry, material)
@@ -189,7 +190,9 @@ class Squid {
           mesh.scale.set(s.r, s.r, s.r)
           this.meshGroup.add(mesh)
         }
-        return { base: { x: s.x, y: s.y, z: s.z }, r: s.r, mesh }
+        const s2 = { i: section.i, j: section.j, base: { x: s.x, y: s.y, z: s.z }, r: s.r, mesh }
+        this.spheres.push(s2)
+        return s2
       })
       this.meshGroup.add(mesh)
       if (wireEnabled) this.meshGroup.add(wireMesh)
@@ -309,13 +312,84 @@ class Squid {
       p.vx += p.fx * dt
       p.vy += p.fy * dt
       p.vz += p.fz * dt - 0.05 * dt
-      if (p.z < 0) {
-        p.z = 0
-        if (p.vz < 0) p.vz = -0.5 * p.vz
-        p.vx *= 0.9
-        p.vy *= 0.9
-      }
+      // if (p.z < 0) {
+      //   p.z = 0
+      //   if (p.vz < 0) p.vz = -0.5 * p.vz
+      //   p.vx *= 0.9
+      //   p.vy *= 0.9
+      // }
     })
+    let count = 0
+    const rectSize = 1.5
+    this.spheres.forEach(s => {
+      if (s.z < s.r && Math.abs(s.x) < rectSize && Math.abs(s.y) < rectSize) count ++
+    })
+    this.spheres.forEach(s => {
+      if (!(s.z < s.r && Math.abs(s.x) < rectSize && Math.abs(s.y) < rectSize)) return
+      const j000 = this.jelly[s.i][s.j][0]
+      const j001 = this.jelly[s.i][s.j][1]
+      const j010 = this.jelly[s.i][s.j + 1][0]
+      const j011 = this.jelly[s.i][s.j + 1][1]
+      const j100 = this.jelly[s.i + 1][s.j][0]
+      const j101 = this.jelly[s.i + 1][s.j][1]
+      const j110 = this.jelly[s.i + 1][s.j + 1][0]
+      const j111 = this.jelly[s.i + 1][s.j + 1][1]
+      const bx = s.base.x
+      const by = s.base.y
+      const bz = s.base.z
+      const vx = j000.vx * (1 - bx) * (1 - by) * (1 - bz)
+               + j001.vx * (1 - bx) * (1 - by) * bz
+               + j010.vx * (1 - bx) * by * (1 - bz)
+               + j011.vx * (1 - bx) * by * bz
+               + j100.vx * bx * (1 - by) * (1 - bz)
+               + j101.vx * bx * (1 - by) * bz
+               + j110.vx * bx * by * (1 - bz)
+               + j111.vx * bx * by * bz
+      const vy = j000.vy * (1 - bx) * (1 - by) * (1 - bz)
+               + j001.vy * (1 - bx) * (1 - by) * bz
+               + j010.vy * (1 - bx) * by * (1 - bz)
+               + j011.vy * (1 - bx) * by * bz
+               + j100.vy * bx * (1 - by) * (1 - bz)
+               + j101.vy * bx * (1 - by) * bz
+               + j110.vy * bx * by * (1 - bz)
+               + j111.vy * bx * by * bz
+      const vz = j000.vz * (1 - bx) * (1 - by) * (1 - bz)
+               + j001.vz * (1 - bx) * (1 - by) * bz
+               + j010.vz * (1 - bx) * by * (1 - bz)
+               + j011.vz * (1 - bx) * by * bz
+               + j100.vz * bx * (1 - by) * (1 - bz)
+               + j101.vz * bx * (1 - by) * bz
+               + j110.vz * bx * by * (1 - bz)
+               + j111.vz * bx * by * bz
+      const fz = (- 64 * (s.z - s.r) + (vz < 0? -16 * vz / dt : 0)) / count
+      const fx = -16 * vx / count
+      const fy = -16 * vy / count
+      j000.vx += fx * dt * (1 - bx) * (1 - by) * (1 - bz)
+      j001.vx += fx * dt * (1 - bx) * (1 - by) * bz
+      j010.vx += fx * dt * (1 - bx) * by * (1 - bz)
+      j011.vx += fx * dt * (1 - bx) * by * bz
+      j100.vx += fx * dt * bx * (1 - by) * (1 - bz)
+      j101.vx += fx * dt * bx * (1 - by) * bz
+      j110.vx += fx * dt * bx * by * (1 - bz)
+      j111.vx += fx * dt * bx * by * bz
+      j000.vy += fy * dt * (1 - bx) * (1 - by) * (1 - bz)
+      j001.vy += fy * dt * (1 - bx) * (1 - by) * bz
+      j010.vy += fy * dt * (1 - bx) * by * (1 - bz)
+      j011.vy += fy * dt * (1 - bx) * by * bz
+      j100.vy += fy * dt * bx * (1 - by) * (1 - bz)
+      j101.vy += fy * dt * bx * (1 - by) * bz
+      j110.vy += fy * dt * bx * by * (1 - bz)
+      j111.vy += fy * dt * bx * by * bz
+      j000.vz += fz * dt * (1 - bx) * (1 - by) * (1 - bz)
+      j001.vz += fz * dt * (1 - bx) * (1 - by) * bz
+      j010.vz += fz * dt * (1 - bx) * by * (1 - bz)
+      j011.vz += fz * dt * (1 - bx) * by * bz
+      j100.vz += fz * dt * bx * (1 - by) * (1 - bz)
+      j101.vz += fz * dt * bx * (1 - by) * bz
+      j110.vz += fz * dt * bx * by * (1 - bz)
+      j111.vz += fz * dt * bx * by * bz
+    })
+
     this.calculateJellyXYZ()
     this.updateMorph()
   }
