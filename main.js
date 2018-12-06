@@ -65,8 +65,8 @@ window.addEventListener('load', () => {
   const renderer = new THREE.WebGLRenderer()
   document.body.appendChild(renderer.domElement)
   renderer.domElement.style.boxShadow = '0 0 1px black'
-  const width = 400
-  const height = 300
+  const width = 800
+  const height = 600
   renderer.setSize(width, height)
   renderer.domElement.style.width = width + 'px'
   renderer.domElement.style.height = height + 'px'
