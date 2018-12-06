@@ -174,7 +174,7 @@ class Squid {
     this.initializeJelly()
     this.randomJelly(0)
   }
-  initializeMesh(sections, { hitSphereEnabled = true, wireEnabled = true }) {
+  initializeMesh(sections, { hitSphere = true, wire = true }) {
     this.meshGroup = new THREE.Group()
     this.spheres = []
     this.sections = sections.map(section => {
@@ -183,7 +183,7 @@ class Squid {
       const wireMesh = new THREE.Mesh(wireCubeGeometry, material)
       const spheres = section.spheres.map(s => {
         let mesh
-        if (hitSphereEnabled) {
+        if (hitSphere) {
           mesh = new THREE.Mesh(sphereGeometry)
           mesh.scale.set(s.r, s.r, s.r)
           this.meshGroup.add(mesh)
@@ -193,7 +193,7 @@ class Squid {
         return s2
       })
       this.meshGroup.add(mesh)
-      if (wireEnabled) this.meshGroup.add(wireMesh)
+      if (wire) this.meshGroup.add(wireMesh)
       return { ...section, material, spheres }
     })
   }
@@ -395,13 +395,78 @@ class Squid {
       p.vz += p.fz * dt - 0.05 * dt
     })
   }
-  hitFloor(dt) {
-    const rectSize = 1.5
+  hitFloor() {
     this.spheres.forEach(s => {
-      if (s.z > s.r || Math.max(Math.abs(s.x), Math.abs(s.y)) > rectSize) return
-      s.fz += (s.r - s.z) + (s.vz < 0 ? -0.25 * s.vz / dt : 0)
+      if (s.z > s.r) return
+      s.fz += (s.r - s.z) + (s.vz < 0 ? -2.5 * s.vz : 0)
       s.fx += -0.25 * s.vx
       s.fy += -0.25 * s.vy
+    })
+  }
+  static hitBoth(sq1, sq2) {
+    const map = {}
+    const r = sq1.spheres[0].r
+    const seg = 2 * r
+    sq1.spheres.forEach(s => {
+      const key = [Math.floor(s.x / seg), Math.floor(s.y / seg), Math.floor(s.z / seg)]
+      ;(map[key] = map[key] || []).push(s)
+    })
+    let cnt1 = 0, cnt2 = 0
+    sq2.spheres.forEach(s => {
+      const sx = Math.floor(s.x / seg)
+      const sy = Math.floor(s.y / seg)
+      const sz = Math.floor(s.z / seg)
+      for (let i = 0; i < 27; i++) {
+        const key = [sx + i % 3 * 2 - 1, sy + Math.floor(i / 3) % 3 * 2 - 1, sz + Math.floor(i / 9) % 3 * 2 - 1]
+        const targets = map[key]
+        if (!targets) continue
+        for (const s2 of targets) {
+          const dx = s2.x - s.x
+          const dy = s2.y - s.y
+          const dz = s2.z - s.z
+          const dr2 = dx * dx + dy * dy + dz * dz
+          cnt1 ++
+          if (dr2 > seg * seg) continue
+          cnt2 ++
+          const dr = Math.sqrt(dr2)
+          const dvx = s2.vx - s.vx
+          const dvy = s2.vy - s.vy
+          const dvz = s2.vz - s.vz
+          const dotv = dx * dvx + dy * dvy + dz * dvz
+          const nvx = dvx - dotv * dx / dr2
+          const nvy = dvy - dotv * dy / dr2
+          const nvz = dvz - dotv * dz / dr2
+          const fd = (dr - seg) * 2
+          const fn = 0.25
+          const fx = fd * dx / dr + fn * nvx
+          const fy = fd * dy / dr + fn * nvy
+          const fz = fd * dz / dr + fn * nvz
+          s.fx += fx
+          s.fy += fy
+          s.fz += fz
+          s2.fx -= fx
+          s2.fy -= fy
+          s2.fz -= fz
+        }
+      }
+    })
+    window.cnt = [cnt1, cnt2]
+  }
+  setPosition(p) {
+    let count = 0
+    const sum = { x: 0, y: 0, z: 0 }
+    this.eachCoord((i, j, k) => {
+      const q = this.jelly[i][j][k]
+      count++
+      sum.x += q.x
+      sum.y += q.y
+      sum.z += q.z
+    })
+    this.eachCoord((i, j, k) => {
+      const q = this.jelly[i][j][k]
+      q.x += p.x - sum.x / count
+      q.y += p.y - sum.y / count
+      q.z += p.z - sum.z / count
     })
   }
   randomJelly(t) {

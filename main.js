@@ -84,21 +84,25 @@ window.addEventListener('load', () => {
 
   const texture = new THREE.Texture(texcanvas)
   texture.needsUpdate = true
-  const squids = [
-    new Squid(ikaSections, numSections, texture),
-    new Squid(ikaSections, numSections, texture)
-  ]
-  window.squid = squids[0]
-  scene.add(squids[0].meshGroup)
+  const squids = []
+  for (let i = 0; i < 3; i++) {
+    const sq = new Squid(ikaSections, numSections, texture, { hitSphere: false, wire: false })
+    sq.randomJelly(Math.random())
+    sq.setPosition({ x: 0, y: 0, z: i + 1 })
+    squids.push(sq)
+  }
+  window.squids = squids
+  squids.forEach(s => scene.add(s.meshGroup))
   const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial)
   plane.position.set(0, 0, 0)
-  plane.scale.set(3, 3, 3)
+  plane.scale.set(4, 4, 4)
   scene.add(plane)
   const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
   directionalLight.position.set(1, 2, 3)
   scene.add(directionalLight)
   document.body.onclick = () => {
-    squid.randomJelly(100 * Math.random())
+    squids[0].randomJelly(100 * Math.random())
+    squids[0].setPosition({ x: 0, y: 0, z: 3 })
   }
   function animate() {
     const t = performance.now() / 1000
@@ -106,15 +110,22 @@ window.addEventListener('load', () => {
     const zsin = Math.sin(0.24 * t)
 
     const dt = 0.1
-    for(let i = 0; i < 3; i++) {
-      squid.resetSphereForce()
-      squid.hitFloor(dt)
-      squid.updateJelly(dt)
-      squid.calculateJellyXYZ()
-      squid.updateSpherePosition()
+    for(let i = 0; i < 2; i++) {
+      squids.forEach(s => s.resetSphereForce())
+      squids.forEach(s => s.hitFloor())
+      squids.forEach(s1 => {
+        squids.forEach(s2 => {
+          if (s1 == s2) return
+          Squid.hitBoth(s1, s2)
+        })
+      })
+      squids.forEach(s => s.updateJelly(dt))
+      squids.forEach(s => s.calculateJellyXYZ(dt))
+      squids.forEach(s => s.updateSpherePosition(dt))
     }
-    squid.updateMorph()
-    camera.position.set(4 * Math.cos(0.2 * t) * zsin * 0, 4 * Math.sin(0.2 * t) * zsin*0-5, 1.1)
+    squids.forEach(s => s.updateMorph())
+    camera.up.set(0, 0, 1)
+    camera.position.set(8 * Math.cos(0.2 * t), 8 * Math.sin(0.2 * t), 2)
     camera.lookAt(0, 0, 1)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
