@@ -172,9 +172,7 @@ class Squid {
     this.texture = texture
     this.initializeMesh(sections, option || {})
     this.initializeJelly()
-    this.rotateJelly(0)
-    this.calculateJellyXYZ()
-    this.updateMorph()
+    this.randomJelly(0)
   }
   initializeMesh(sections, { hitSphereEnabled = true, wireEnabled = true }) {
     this.meshGroup = new THREE.Group()
@@ -199,7 +197,7 @@ class Squid {
       return { ...section, material, spheres }
     })
   }
-  transform(sec, p) {
+  transform(si, sj, p) {
     const a1x = p.x * p.x * (3 - 2 * p.x)
     const a1y = p.y * p.y * (3 - 2 * p.y)
     const a1z = p.z * p.z * (3 - 2 * p.z)
@@ -220,7 +218,7 @@ class Squid {
       const i = ijk & 1
       const j = (ijk >> 1) & 1
       const k = (ijk >> 2) & 1
-      const v = this.jelly[sec.i + i][sec.j + j][k]
+      const v = this.jelly[si + i][sj + j][k]
       x += (
         v.x * (i === 0 ? a0x : a1x) * (j === 0 ? a0y : a1y) * (k === 0 ? a0z : a1z)
         + v.xx * (i === 0 ? b0x : b1x) * (j === 0 ? a0y : a1y) * (k === 0 ? a0z : a1z)
@@ -245,18 +243,59 @@ class Squid {
   eachBin3D(f) {
     for (let i = 0; i < 8; i++) f((i >> 2) & 1, (i >> 1) & 1, i & 1)
   }
+  updateSphereXV(s) {
+    const bx = s.base.x
+    const by = s.base.y
+    const bz = s.base.z
+    const { i, j } = s
+    const j000 = this.jelly[i][j][0]
+    const j001 = this.jelly[i][j][1]
+    const j010 = this.jelly[i][j + 1][0]
+    const j011 = this.jelly[i][j + 1][1]
+    const j100 = this.jelly[i + 1][j][0]
+    const j101 = this.jelly[i + 1][j][1]
+    const j110 = this.jelly[i + 1][j + 1][0]
+    const j111 = this.jelly[i + 1][j + 1][1]
+    s.vx = j000.vx * (1 - bx) * (1 - by) * (1 - bz)
+      + j001.vx * (1 - bx) * (1 - by) * bz
+      + j010.vx * (1 - bx) * by * (1 - bz)
+      + j011.vx * (1 - bx) * by * bz
+      + j100.vx * bx * (1 - by) * (1 - bz)
+      + j101.vx * bx * (1 - by) * bz
+      + j110.vx * bx * by * (1 - bz)
+      + j111.vx * bx * by * bz
+    s.vy = j000.vy * (1 - bx) * (1 - by) * (1 - bz)
+      + j001.vy * (1 - bx) * (1 - by) * bz
+      + j010.vy * (1 - bx) * by * (1 - bz)
+      + j011.vy * (1 - bx) * by * bz
+      + j100.vy * bx * (1 - by) * (1 - bz)
+      + j101.vy * bx * (1 - by) * bz
+      + j110.vy * bx * by * (1 - bz)
+      + j111.vy * bx * by * bz
+    s.vz = j000.vz * (1 - bx) * (1 - by) * (1 - bz)
+      + j001.vz * (1 - bx) * (1 - by) * bz
+      + j010.vz * (1 - bx) * by * (1 - bz)
+      + j011.vz * (1 - bx) * by * bz
+      + j100.vz * bx * (1 - by) * (1 - bz)
+      + j101.vz * bx * (1 - by) * bz
+      + j110.vz * bx * by * (1 - bz)
+      + j111.vz * bx * by * bz
+    const p = this.transform(s.i, s.j, s.base)
+    s.x = p.x
+    s.y = p.y
+    s.z = p.z
+  }
+  updateSpherePosition() {
+    for (const s of this.spheres) {
+      this.updateSphereXV(s)
+      if (s.mesh) s.mesh.position.set(s.x, s.y, s.z)
+    }
+  }
   updateMorph() {
     for (const sec of this.sections) {
       const i = sec.i
       const j = sec.j
       const uniforms = {}
-      for (const sphere of sec.spheres) {
-        const p = this.transform(sec, sphere.base)
-        sphere.x = p.x
-        sphere.y = p.y
-        sphere.z = p.z
-        if (sphere.mesh) sphere.mesh.position.set(p.x, p.y, p.z)
-      }
       this.eachBin3D((x,y,z) => {
         const v = this.jelly[i + x][j + y][z]
         sec.material.uniforms['v' + x + y + z] = { value: new THREE.Vector3(v.x, v.y, v.z) }
@@ -275,7 +314,10 @@ class Squid {
       }
     }
   }
-  updateJelly() {
+  resetSphereForce() {
+    this.spheres.forEach(s => { s.fx = s.fy = s.fz = 0 })
+  }
+  updateJelly(dt) {
     this.eachCoord((i, j, k) => {
       const p = this.jelly[i][j][k]
       p.fx = p.fy = p.fz = 0
@@ -302,8 +344,47 @@ class Squid {
         pb.fz -= fz
       })
     })
-
-    const dt = 0.1
+    this.spheres.forEach(s => {
+      const bx = s.base.x
+      const by = s.base.y
+      const bz = s.base.z
+      const { i, j } = s
+      const j000 = this.jelly[i][j][0]
+      const j001 = this.jelly[i][j][1]
+      const j010 = this.jelly[i][j + 1][0]
+      const j011 = this.jelly[i][j + 1][1]
+      const j100 = this.jelly[i + 1][j][0]
+      const j101 = this.jelly[i + 1][j][1]
+      const j110 = this.jelly[i + 1][j + 1][0]
+      const j111 = this.jelly[i + 1][j + 1][1]
+      const fx = s.fx
+      const fy = s.fy
+      const fz = s.fz
+      j000.fx += fx * (1 - bx) * (1 - by) * (1 - bz)
+      j001.fx += fx * (1 - bx) * (1 - by) * bz
+      j010.fx += fx * (1 - bx) * by * (1 - bz)
+      j011.fx += fx * (1 - bx) * by * bz
+      j100.fx += fx * bx * (1 - by) * (1 - bz)
+      j101.fx += fx * bx * (1 - by) * bz
+      j110.fx += fx * bx * by * (1 - bz)
+      j111.fx += fx * bx * by * bz
+      j000.fy += fy * (1 - bx) * (1 - by) * (1 - bz)
+      j001.fy += fy * (1 - bx) * (1 - by) * bz
+      j010.fy += fy * (1 - bx) * by * (1 - bz)
+      j011.fy += fy * (1 - bx) * by * bz
+      j100.fy += fy * bx * (1 - by) * (1 - bz)
+      j101.fy += fy * bx * (1 - by) * bz
+      j110.fy += fy * bx * by * (1 - bz)
+      j111.fy += fy * bx * by * bz
+      j000.fz += fz * (1 - bx) * (1 - by) * (1 - bz)
+      j001.fz += fz * (1 - bx) * (1 - by) * bz
+      j010.fz += fz * (1 - bx) * by * (1 - bz)
+      j011.fz += fz * (1 - bx) * by * bz
+      j100.fz += fz * bx * (1 - by) * (1 - bz)
+      j101.fz += fz * bx * (1 - by) * bz
+      j110.fz += fz * bx * by * (1 - bz)
+      j111.fz += fz * bx * by * bz
+    })
     this.eachCoord((i, j, k) => {
       const p = this.jelly[i][j][k]
       p.x += p.vx * dt
@@ -312,88 +393,18 @@ class Squid {
       p.vx += p.fx * dt
       p.vy += p.fy * dt
       p.vz += p.fz * dt - 0.05 * dt
-      // if (p.z < 0) {
-      //   p.z = 0
-      //   if (p.vz < 0) p.vz = -0.5 * p.vz
-      //   p.vx *= 0.9
-      //   p.vy *= 0.9
-      // }
     })
-    let count = 0
+  }
+  hitFloor(dt) {
     const rectSize = 1.5
     this.spheres.forEach(s => {
-      if (s.z < s.r && Math.abs(s.x) < rectSize && Math.abs(s.y) < rectSize) count ++
+      if (s.z > s.r || Math.max(Math.abs(s.x), Math.abs(s.y)) > rectSize) return
+      s.fz += (s.r - s.z) + (s.vz < 0 ? -0.25 * s.vz / dt : 0)
+      s.fx += -0.25 * s.vx
+      s.fy += -0.25 * s.vy
     })
-    this.spheres.forEach(s => {
-      if (!(s.z < s.r && Math.abs(s.x) < rectSize && Math.abs(s.y) < rectSize)) return
-      const j000 = this.jelly[s.i][s.j][0]
-      const j001 = this.jelly[s.i][s.j][1]
-      const j010 = this.jelly[s.i][s.j + 1][0]
-      const j011 = this.jelly[s.i][s.j + 1][1]
-      const j100 = this.jelly[s.i + 1][s.j][0]
-      const j101 = this.jelly[s.i + 1][s.j][1]
-      const j110 = this.jelly[s.i + 1][s.j + 1][0]
-      const j111 = this.jelly[s.i + 1][s.j + 1][1]
-      const bx = s.base.x
-      const by = s.base.y
-      const bz = s.base.z
-      const vx = j000.vx * (1 - bx) * (1 - by) * (1 - bz)
-               + j001.vx * (1 - bx) * (1 - by) * bz
-               + j010.vx * (1 - bx) * by * (1 - bz)
-               + j011.vx * (1 - bx) * by * bz
-               + j100.vx * bx * (1 - by) * (1 - bz)
-               + j101.vx * bx * (1 - by) * bz
-               + j110.vx * bx * by * (1 - bz)
-               + j111.vx * bx * by * bz
-      const vy = j000.vy * (1 - bx) * (1 - by) * (1 - bz)
-               + j001.vy * (1 - bx) * (1 - by) * bz
-               + j010.vy * (1 - bx) * by * (1 - bz)
-               + j011.vy * (1 - bx) * by * bz
-               + j100.vy * bx * (1 - by) * (1 - bz)
-               + j101.vy * bx * (1 - by) * bz
-               + j110.vy * bx * by * (1 - bz)
-               + j111.vy * bx * by * bz
-      const vz = j000.vz * (1 - bx) * (1 - by) * (1 - bz)
-               + j001.vz * (1 - bx) * (1 - by) * bz
-               + j010.vz * (1 - bx) * by * (1 - bz)
-               + j011.vz * (1 - bx) * by * bz
-               + j100.vz * bx * (1 - by) * (1 - bz)
-               + j101.vz * bx * (1 - by) * bz
-               + j110.vz * bx * by * (1 - bz)
-               + j111.vz * bx * by * bz
-      const fz = (- 64 * (s.z - s.r) + (vz < 0? -16 * vz / dt : 0)) / count
-      const fx = -16 * vx / count
-      const fy = -16 * vy / count
-      j000.vx += fx * dt * (1 - bx) * (1 - by) * (1 - bz)
-      j001.vx += fx * dt * (1 - bx) * (1 - by) * bz
-      j010.vx += fx * dt * (1 - bx) * by * (1 - bz)
-      j011.vx += fx * dt * (1 - bx) * by * bz
-      j100.vx += fx * dt * bx * (1 - by) * (1 - bz)
-      j101.vx += fx * dt * bx * (1 - by) * bz
-      j110.vx += fx * dt * bx * by * (1 - bz)
-      j111.vx += fx * dt * bx * by * bz
-      j000.vy += fy * dt * (1 - bx) * (1 - by) * (1 - bz)
-      j001.vy += fy * dt * (1 - bx) * (1 - by) * bz
-      j010.vy += fy * dt * (1 - bx) * by * (1 - bz)
-      j011.vy += fy * dt * (1 - bx) * by * bz
-      j100.vy += fy * dt * bx * (1 - by) * (1 - bz)
-      j101.vy += fy * dt * bx * (1 - by) * bz
-      j110.vy += fy * dt * bx * by * (1 - bz)
-      j111.vy += fy * dt * bx * by * bz
-      j000.vz += fz * dt * (1 - bx) * (1 - by) * (1 - bz)
-      j001.vz += fz * dt * (1 - bx) * (1 - by) * bz
-      j010.vz += fz * dt * (1 - bx) * by * (1 - bz)
-      j011.vz += fz * dt * (1 - bx) * by * bz
-      j100.vz += fz * dt * bx * (1 - by) * (1 - bz)
-      j101.vz += fz * dt * bx * (1 - by) * bz
-      j110.vz += fz * dt * bx * by * (1 - bz)
-      j111.vz += fz * dt * bx * by * bz
-    })
-
-    this.calculateJellyXYZ()
-    this.updateMorph()
   }
-  rotateJelly(t) {
+  randomJelly(t) {
     const a = 4 * Math.cos(t)
     const b = 4 * Math.sin(t)
     const cosrot = Math.cos(t * 0.2 + 0.5)
@@ -417,6 +428,9 @@ class Squid {
       p.z += 2
       p.vx = p.vy = p.vz = 0
     })
+    this.calculateJellyXYZ()
+    this.updateSpherePosition()
+    this.updateMorph()
   }
   calculateJellyXYZ() {
     this.eachCoord((i, j, k) => {

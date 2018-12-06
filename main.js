@@ -84,9 +84,12 @@ window.addEventListener('load', () => {
 
   const texture = new THREE.Texture(texcanvas)
   texture.needsUpdate = true
-  const squid = new Squid(ikaSections, numSections, texture)
-  window.squid = squid
-  scene.add(squid.meshGroup)
+  const squids = [
+    new Squid(ikaSections, numSections, texture),
+    new Squid(ikaSections, numSections, texture)
+  ]
+  window.squid = squids[0]
+  scene.add(squids[0].meshGroup)
   const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial)
   plane.position.set(0, 0, 0)
   plane.scale.set(3, 3, 3)
@@ -95,20 +98,22 @@ window.addEventListener('load', () => {
   directionalLight.position.set(1, 2, 3)
   scene.add(directionalLight)
   document.body.onclick = () => {
-    squid.rotateJelly(100 * Math.random())
-    squid.calculateJellyXYZ()
-    squid.updateMorph()
+    squid.randomJelly(100 * Math.random())
   }
   function animate() {
     const t = performance.now() / 1000
     const zcos = Math.cos(0.24 * t)
     const zsin = Math.sin(0.24 * t)
-    for(let i=0;i<3;i++)squid.updateJelly()
 
-    // squid.rotateJelly(t)
-    // squid.calculateJellyXYZ()
-    // squid.updateMorph()
-
+    const dt = 0.1
+    for(let i = 0; i < 3; i++) {
+      squid.resetSphereForce()
+      squid.hitFloor(dt)
+      squid.updateJelly(dt)
+      squid.calculateJellyXYZ()
+      squid.updateSpherePosition()
+    }
+    squid.updateMorph()
     camera.position.set(4 * Math.cos(0.2 * t) * zsin * 0, 4 * Math.sin(0.2 * t) * zsin*0-5, 1.1)
     camera.lookAt(0, 0, 1)
     renderer.render(scene, camera)
