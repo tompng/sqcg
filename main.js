@@ -74,20 +74,30 @@ window.addEventListener('load', () => {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
   camera.position.set(0, 0, 4)
-  const texcanvas = document.createElement('canvas')
-  texcanvas.width = texcanvas.height = 512
-  const texctx = texcanvas.getContext('2d')
-  texctx.scale(texcanvas.width, texcanvas.height)
-  texctx.fillStyle = '#fa4'
-  texctx.fillRect(0, 0, 1, 1)
-  texctx.translate(0.5, 0.5)
-  texctx.scale(0.5, 0.5)
-  sqDrawEyes(texctx)
-
-  const texture = new THREE.Texture(texcanvas)
-  texture.needsUpdate = true
+  function createSquidTexture(color) {
+    const texcanvas = document.createElement('canvas')
+    texcanvas.width = texcanvas.height = 512
+    const texctx = texcanvas.getContext('2d')
+    texctx.scale(texcanvas.width, texcanvas.height)
+    texctx.fillStyle = color || 'white'
+    texctx.fillRect(0, 0, 1, 1)
+    texctx.translate(0.5, 0.5)
+    texctx.scale(0.5, 0.5)
+    sqDrawEyes(texctx)
+    const texture = new THREE.Texture(texcanvas)
+    texture.needsUpdate = true
+    return texture
+  }
+  const textures = [
+    createSquidTexture('#f62'),
+    createSquidTexture('#cf4'),
+    createSquidTexture('#13f'),
+    createSquidTexture('#e4f'),
+  ]
   const squids = []
   function addSquid(z = 2) {
+    const texture = textures.shift()
+    textures.push(texture)
     const sq = new Squid(ikaSections, numSections, texture, { hitSphere: false, mesh: true, wire: false })
     randomizeSquid(sq, z)
     squids.push(sq)
