@@ -174,7 +174,7 @@ class Squid {
     this.initializeJelly()
     this.randomJelly(0)
   }
-  initializeMesh(sections, { hitSphere = true, wire = true }) {
+  initializeMesh(sections, option = {}) {
     this.meshGroup = new THREE.Group()
     this.spheres = []
     this.sections = sections.map(section => {
@@ -183,7 +183,7 @@ class Squid {
       const wireMesh = new THREE.Mesh(wireCubeGeometry, material)
       const spheres = section.spheres.map(s => {
         let mesh
-        if (hitSphere) {
+        if (option.hitSphere) {
           mesh = new THREE.Mesh(sphereGeometry)
           mesh.scale.set(s.r, s.r, s.r)
           this.meshGroup.add(mesh)
@@ -192,8 +192,8 @@ class Squid {
         this.spheres.push(s2)
         return s2
       })
-      this.meshGroup.add(mesh)
-      if (wire) this.meshGroup.add(wireMesh)
+      if (option.mesh) this.meshGroup.add(mesh)
+      if (option.wire) this.meshGroup.add(wireMesh)
       return { ...section, material, spheres }
     })
   }

@@ -88,13 +88,16 @@ window.addEventListener('load', () => {
   texture.needsUpdate = true
   const squids = []
   function addSquid(z = 2) {
-    const sq = new Squid(ikaSections, numSections, texture, { hitSphere: false, wire: false })
+    const sq = new Squid(ikaSections, numSections, texture, { hitSphere: false, mesh: true, wire: false })
+    randomizeSquid(sq, z)
+    squids.push(sq)
+    scene.add(sq.meshGroup)
+  }
+  function randomizeSquid(sq, z) {
     sq.randomJelly(16 * Math.random())
     sq.setPosition({ x: 0, y: 0, z: z })
     sq.calculateJellyXYZ()
     sq.updateSpherePosition()
-    squids.push(sq)
-    scene.add(sq.meshGroup)
   }
   window.squids = squids
   addSquid(3)
@@ -106,7 +109,12 @@ window.addEventListener('load', () => {
   directionalLight.position.set(1, 2, 3)
   scene.add(directionalLight)
   document.body.onclick = () => {
-    addSquid(3)
+    if (squids.length < 2) addSquid(3)
+    else {
+      const sq = squids.shift()
+      squids.push(sq)
+      randomizeSquid(sq, 3)
+    }
   }
   let cnt = 0
   function animate() {
