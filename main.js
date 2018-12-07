@@ -109,7 +109,7 @@ window.addEventListener('load', () => {
   directionalLight.position.set(1, 2, 3)
   scene.add(directionalLight)
   document.body.onclick = () => {
-    if (squids.length < 2) addSquid(3)
+    if (squids.length < 4) addSquid(3)
     else {
       const sq = squids.shift()
       squids.push(sq)
@@ -122,10 +122,11 @@ window.addEventListener('load', () => {
     const zcos = Math.cos(0.24 * t)
     const zsin = Math.sin(0.24 * t)
 
-    const dt = 0.1
+    const dt = 0.05
     for(let i = 0; i < 2; i++) {
       squids.forEach(s => s.resetSphereForce())
       squids.forEach(s => s.hitFloor())
+      squids.forEach(s => s.calcHitMap())
       squids.forEach(s1 => {
         squids.forEach(s2 => {
           if (s1 == s2) return
