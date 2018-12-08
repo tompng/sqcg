@@ -548,9 +548,12 @@ class Squid {
     //     if (nearest) hit(s, nearest)
     //   })
     // }
-    // for (let i = Math.floor(sq2.hitMap.imin / maskN); i <= Math.floor(sq2.hitMap.imax / maskN); i++) {
-    //   for (let j = Math.floor(sq2.hitMap.jmin / maskN); j <= Math.floor(sq2.hitMap.jmax / maskN); j++) {
-    //     for (let k = Math.floor(sq2.hitMap.kmin / maskN); k <= Math.floor(sq2.hitMap.kmax / maskN); k++) {
+    // const ilmax = Math.floor(sq2.hitMap.imax / maskN) - Math.floor(sq2.hitMap.imin / maskN)
+    // const jlmax = Math.floor(sq2.hitMap.jmax / maskN) - Math.floor(sq2.hitMap.jmin / maskN)
+    // const klmax = Math.floor(sq2.hitMap.kmax / maskN) - Math.floor(sq2.hitMap.kmin / maskN)
+    // for (let i = 0; i <= ilmax; i++) {
+    //   for (let j = 0; j <= jlmax; j++) {
+    //     for (let k = 0; k <= klmax; k++) {
     //       test(maskLevel - 1, i, j, k)
     //     }
     //   }
