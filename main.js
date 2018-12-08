@@ -13,7 +13,7 @@ onload = () => {
   ctx.stroke()
   sqDrawEyes(ctx)
 }
-
+let cameraDistance = 6
 window.addEventListener('load', () => {
   function showMap(map) {
     const size = map.length
@@ -66,14 +66,14 @@ window.addEventListener('load', () => {
   window.renderer = renderer
   document.body.appendChild(renderer.domElement)
   renderer.domElement.style.boxShadow = '0 0 1px black'
-  const width = 800
-  const height = 600
+  const width = 1500
+  const height = 800
   renderer.setSize(width, height)
   renderer.domElement.style.width = width + 'px'
   renderer.domElement.style.height = height + 'px'
   renderer.setPixelRatio(window.devicePixelRatio)
   const scene = new THREE.Scene()
-  const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
+  const camera = new THREE.PerspectiveCamera(30, width / height, 0.1, 100)
   camera.position.set(0, 0, 4)
   window.camera = camera
   function createSquidTexture(color) {
@@ -90,12 +90,8 @@ window.addEventListener('load', () => {
     texture.needsUpdate = true
     return texture
   }
-  const textures = [
-    createSquidTexture('#f62'),
-    createSquidTexture('#cf4'),
-    createSquidTexture('#13f'),
-    createSquidTexture('#e4f'),
-  ]
+  const colors = ['#F4A', '#CF4', '#F62', '#24F', '#4FD', '#E4F']
+  const textures = colors.map(c => createSquidTexture(c))
   const squids = []
   function addSquid(z = 2) {
     const texture = textures.shift()
@@ -107,7 +103,7 @@ window.addEventListener('load', () => {
   }
   function randomizeSquid(sq, z) {
     sq.randomJelly(16 * Math.random())
-    sq.setPosition({ x: 0, y: 0, z: z })
+    sq.setPosition({ x: 4 * Math.random() - 2, y: 0, z: z })
     sq.calculateJellyXYZ()
     sq.updateSpherePosition()
   }
@@ -127,7 +123,7 @@ window.addEventListener('load', () => {
   directionalLight.position.set(2,1,3)
   scene.add(directionalLight)
   document.body.onclick = () => {
-    if (squids.length < 4) {
+    if (squids.length < 12) {
       addSquid(3)
     } else {
       const sq = squids.shift()
@@ -136,19 +132,9 @@ window.addEventListener('load', () => {
       sq.countdown = 80
     }
   }
-  let cnt = 0
-  function animate() {
-    const t = ++cnt * 0.05
-    const zcos = Math.cos(0.24 * t)
-    const zsin = Math.sin(0.24 * t)
-    squids.forEach(sq => {
-      if (sq.countdown) {
-        sq.countdown--
-        if (sq.countdown === 0) {
-          randomizeSquid(sq, 4)
-        }
-      }
-    })
+  let running = true
+  document.body.onkeypress = () => { running = !running }
+  function update() {
     const dt = 0.05
     for(let i = 0; i < 2; i++) {
       squids.forEach(s => s.resetSphereForce())
@@ -165,8 +151,23 @@ window.addEventListener('load', () => {
       squids.forEach(s => s.updateSpherePosition())
     }
     squids.forEach(s => s.updateMorph())
+  }
+  let cnt = 0
+  function animate() {
+    const t = ++cnt * 0.05
+    const zcos = Math.cos(0.24 * t)
+    const zsin = Math.sin(0.24 * t)
+    squids.forEach(sq => {
+      if (sq.countdown) {
+        sq.countdown--
+        if (sq.countdown === 0) {
+          randomizeSquid(sq, 4)
+        }
+      }
+    })
+    if (running) update()
     camera.up.set(0, 0, 1)
-    camera.position.set(6 * Math.cos(0.2 * t), 6 * Math.sin(0.2 * t), 2)
+    camera.position.set(cameraDistance * Math.cos(0.2 * t), cameraDistance * Math.sin(0.2 * t), 2)
     camera.lookAt(0, 0, 1)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
