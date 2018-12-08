@@ -198,7 +198,6 @@ class Squid {
       })
       if (option.wire) {
         const wireMesh = new THREE.Mesh(wireCubeGeometry, material)
-        wireMesh.castShadow = wireMesh.receiveShadow = true
         this.meshGroup.add(wireMesh)
       }
       return { ...section, material, depthMaterial, spheres }

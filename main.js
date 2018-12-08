@@ -113,7 +113,7 @@ window.addEventListener('load', () => {
   }
   window.squids = squids
   addSquid(3)
-  const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial({ wireframe: false }))
+  const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial)
   plane.position.set(0, 0, 0)
   plane.scale.set(8, 8, 8)
   scene.add(plane)
