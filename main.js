@@ -106,6 +106,7 @@ window.addEventListener('load', () => {
     sq.setPosition({ x: 4 * Math.random() - 2, y: 0, z: z })
     sq.calculateJellyXYZ()
     sq.updateSpherePosition()
+    sq.updateMorph()
   }
   window.squids = squids
   addSquid(3)
