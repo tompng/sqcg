@@ -176,7 +176,7 @@ void main() {
 }
 `
 function ikaShader(uniforms) {
-  return window.aaa = new THREE.ShaderMaterial({
+  return new THREE.ShaderMaterial({
     vertexShader: ikaVertexCode,
     fragmentShader: ikaFragmentCode,
     uniforms: { ...THREE.UniformsLib.lights, ...uniforms },

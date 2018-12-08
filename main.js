@@ -30,7 +30,6 @@ window.addEventListener('load', () => {
       d.data[k+2] = v * 0xff
       d.data[k+3] = 0xff
     })
-    window.m=map
     g.putImageData(d, 0, 0)
     document.body.appendChild(c)
   }

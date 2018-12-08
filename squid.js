@@ -463,7 +463,6 @@ class Squid {
           }
         }
         if (nearest) hit(s, nearest)
-        // if (nearest) hoge()
       }
     })
     function hit(s, s2) {
