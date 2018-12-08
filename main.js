@@ -124,15 +124,16 @@ window.addEventListener('load', () => {
   renderer.shadowMap.enabled = true
   renderer.shadowMapType = THREE.PCFSoftShadowMap
   directionalLight.shadow.mapSize.width = directionalLight.shadow.mapSize.height = 2048;
-  directionalLight.position.set(1,1,4)
+  directionalLight.position.set(2,1,3)
   scene.add(directionalLight)
   document.body.onclick = () => {
-    if (squids.length < 4) addSquid(3)
-    else {
+    if (squids.length < 4) {
+      addSquid(3)
+    } else {
       const sq = squids.shift()
       sq.meshGroup
       squids.push(sq)
-      randomizeSquid(sq, 3)
+      sq.countdown = 80
     }
   }
   let cnt = 0
@@ -140,15 +141,22 @@ window.addEventListener('load', () => {
     const t = ++cnt * 0.05
     const zcos = Math.cos(0.24 * t)
     const zsin = Math.sin(0.24 * t)
-
+    squids.forEach(sq => {
+      if (sq.countdown) {
+        sq.countdown--
+        if (sq.countdown === 0) {
+          randomizeSquid(sq, 4)
+        }
+      }
+    })
     const dt = 0.05
     for(let i = 0; i < 2; i++) {
       squids.forEach(s => s.resetSphereForce())
-      squids.forEach(s => s.hitFloor())
+      squids.forEach(s => !s.countdown && s.hitFloor())
       squids.forEach(s => s.calcHitMap())
       squids.forEach(s1 => {
         squids.forEach(s2 => {
-          if (s1 == s2) return
+          if (s1 === s2 || s1.countdown || s2.countdown) return
           Squid.hitBoth(s1, s2)
         })
       })
