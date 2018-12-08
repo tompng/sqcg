@@ -412,152 +412,60 @@ class Squid {
   }
   calcHitMap() {
     const map = []
-    const masks = [[], [], [], []]
+    const map2 = []
     const r = this.spheres[0].r
-    const seg = 4 * r
+    const seg = 2 * r
     const xs = this.spheres.map(s => s.x)
     const ys = this.spheres.map(s => s.y)
     const zs = this.spheres.map(s => s.z)
-    const imin = Math.floor(Math.min(...xs) / seg)
-    const jmin = Math.floor(Math.min(...ys) / seg)
-    const kmin = Math.floor(Math.min(...zs) / seg)
-    const imax = Math.floor(Math.max(...xs) / seg)
-    const jmax = Math.floor(Math.max(...ys) / seg)
-    const kmax = Math.floor(Math.max(...zs) / seg)
+    const imin = Math.floor(Math.min(...xs) / seg) - 1
+    const jmin = Math.floor(Math.min(...ys) / seg) - 1
+    const kmin = Math.floor(Math.min(...zs) / seg) - 1
+    const imax = Math.floor(Math.max(...xs) / seg) + 1
+    const jmax = Math.floor(Math.max(...ys) / seg) + 1
+    const kmax = Math.floor(Math.max(...zs) / seg) + 1
     this.spheres.forEach(s => {
-      const i = Math.floor(s.x / seg)
-      const j = Math.floor(s.y / seg)
-      const k = Math.floor(s.z / seg)
-      const idx = ((i - imin) << 8) | ((j - jmin) << 4) | (k - kmin)
+      const i = Math.floor(s.x / seg) - imin
+      const j = Math.floor(s.y / seg) - jmin
+      const k = Math.floor(s.z / seg) - kmin
+      const idx = (i << 8) | (j << 4) | k
       ;(map[idx] = map[idx] || []).push(s)
-      // masks.forEach((m, l) => {
-      //   const n = 2 << l
-      //   const ii = Math.floor(i / n) - Math.floor(imin / n)
-      //   const jj = Math.floor(j / n) - Math.floor(jmin / n)
-      //   const kk = Math.floor(k / n) - Math.floor(kmin / n)
-      //   m[(ii << 8) | (jj << 4) | kk] = true
-      // })
-    })
-    this.hitMap = { map, masks, imin, jmin, kmin, imax, jmax, kmax, seg, r }
-  }
-  static hitBoth(sq1, sq2) {
-    const maskLevel = sq2.hitMap.masks.length
-    const maskN = 1 << maskLevel
-    const r = sq2.hitMap.r
-    const seg = sq2.hitMap.seg
-    // function test(level, i2, j2, k2) {
-    //   if (!sq2.hitMap.masks[level][(i2 << 8) | (j2 << 4) | k2]) return
-    //   const n = 2 << level
-    //   const i = i2 + Math.floor(sq2.hitMap.imin / n)
-    //   const j = j2 + Math.floor(sq2.hitMap.jmin / n)
-    //   const k = k2 + Math.floor(sq2.hitMap.kmin / n)
-    //   const i1 = i - Math.floor(sq1.hitMap.imin / n)
-    //   const j1 = j - Math.floor(sq1.hitMap.jmin / n)
-    //   const k1 = k - Math.floor(sq1.hitMap.kmin / n)
-    //   let flag = false
-    //   for (let l = 0; l < 27; l++) {
-    //     const ii = i1 + l % 3 - 1
-    //     const jj = j1 + Math.floor(l / 3) % 3 - 1
-    //     const kk = k1 + Math.floor(l / 9) - 1
-    //     if (ii < 0 || jj < 0 || kk < 0 || ii >= 16 || jj >= 16 || kk >= 16) continue
-    //     if (!sq1.hitMap.masks[level][(ii << 8) | (jj << 4) | kk]) continue
-    //     flag = true
-    //     break
-    //   }
-    //   if (!flag) return
-    //   const ii = i * 2 - Math.floor(2 * sq2.hitMap.imin / n)
-    //   const jj = j * 2 - Math.floor(2 * sq2.hitMap.jmin / n)
-    //   const kk = k * 2 - Math.floor(2 * sq2.hitMap.kmin / n)
-    //   if (level) {
-    //     for (let l = 0; l < 8; l++) test(level - 1, ii + (l >> 2), jj + ((l >> 1) & 1), kk + (l & 1))
-    //   } else {
-    //     for (let l = 0; l < 8; l++) htest(ii + (l >> 2), jj + ((l >> 1) & 1), kk + (l & 1))
-    //   }
-    // }
-
-    sq2.hitMap.map.forEach((spheres, idx) => {
-      if (!spheres) return
-      const i = (idx >> 8) + sq2.hitMap.imin  - sq1.hitMap.imin
-      const j = ((idx >> 4) & 0xf) + sq2.hitMap.jmin  - sq1.hitMap.jmin
-      const k = (idx & 0xf) + sq2.hitMap.kmin  - sq1.hitMap.kmin
-      let flag = false
       for (let l = 0; l < 27; l++) {
         const ii = i + l % 3 - 1
         const jj = j + Math.floor(l / 3) % 3 - 1
         const kk = k + Math.floor(l / 9) - 1
-        if (ii < 0 || jj < 0 || kk < 0 || ii >= 16 || jj >= 16 || kk >= 16) continue
-        if (!sq1.hitMap.map[(ii << 8) | (jj << 4) | kk]) continue
-        flag = true
-        break
+        const idx2 = (ii << 8) | (jj << 4) | kk
+        ;(map2[idx2] = map2[idx2] || []).push(s)
       }
-      if (!flag) return
-      spheres.forEach(s => {
-        const i0 = Math.floor(s.x / seg - 0.5) - sq1.hitMap.imin
-        const j0 = Math.floor(s.y / seg - 0.5) - sq1.hitMap.jmin
-        const k0 = Math.floor(s.z / seg - 0.5) - sq1.hitMap.kmin
-        let nearest, dist2
-        for (let l = 0; l < 8; l++) {
-          const ii = i0 + (l & 1)
-          const jj = j0 + ((l >> 1) & 1)
-          const kk = k0 + (l >> 2)
-          if (ii < 0 || jj < 0 || kk < 0 || ii >= 16 || jj >= 16 || kk >= 16) continue
-          const targets = sq1.hitMap.map[(ii << 8) | (jj << 4) | kk]
-          if (!targets) continue
-          for (const s2 of targets) {
-            const dx = s2.x - s.x
-            const dy = s2.y - s.y
-            const dz = s2.z - s.z
-            const dr2 = dx * dx + dy * dy + dz * dz
-            if (dr2 > 4 * r * r) continue
-            if (!nearest || dr2 < dist2) {
-              nearest = s2
-              dist2 = dr2
-            }
+    })
+    this.hitMap = { map, map2, imin, jmin, kmin, imax, jmax, kmax, seg, r }
+  }
+  static hitBoth(sq1, sq2) {
+    const r = sq2.hitMap.r
+    sq2.hitMap.map.forEach((spheres, idx) => {
+      if (!spheres) return
+      const i = (idx >> 8) + sq2.hitMap.imin  - sq1.hitMap.imin
+      const j = ((idx >> 4) & 0xf) + sq2.hitMap.jmin - sq1.hitMap.jmin
+      const k = (idx & 0xf) + sq2.hitMap.kmin  - sq1.hitMap.kmin
+      if (i < 0 || j < 0 || k < 0 || i >= 16 || j >= 16 || k >= 16) return
+      const targets = sq1.hitMap.map2[(i << 8) | (j << 4) | k]
+      if (!targets) return
+      for (const s of spheres) {
+        let nearest, dist2 = 4 * r * r
+        for (const s2 of targets) {
+          const dx = s2.x - s.x
+          const dy = s2.y - s.y
+          const dz = s2.z - s.z
+          const dr2 = dx * dx + dy * dy + dz * dz
+          if (dr2 < dist2) {
+            nearest = s2
+            dist2 = dr2
           }
         }
         if (nearest) hit(s, nearest)
-      })
+        // if (nearest) hoge()
+      }
     })
-    // function htest(i2, j2, k2) {
-    //   const spheres = sq2.hitMap.map[(i2 << 8) | (j2 << 4) | k2]
-    //   if (!spheres) return
-    //   spheres.forEach(s => {
-    //     const i0 = Math.floor(s.x / seg - 0.5) - sq1.hitMap.imin
-    //     const j0 = Math.floor(s.y / seg - 0.5) - sq1.hitMap.jmin
-    //     const k0 = Math.floor(s.z / seg - 0.5) - sq1.hitMap.kmin
-    //     let nearest, dist2
-    //     for (let l = 0; l < 8; l++) {
-    //       const ii = i0 + (l & 1)
-    //       const jj = j0 + ((l >> 1) & 1)
-    //       const kk = k0 + (l >> 2)
-    //       if (ii < 0 || jj < 0 || kk < 0 || ii >= 16 || jj >= 16 || kk >= 16) continue
-    //       const targets = sq1.hitMap.map[(ii << 8) | (jj << 4) | kk]
-    //       if (!targets) continue
-    //       for (const s2 of targets) {
-    //         const dx = s2.x - s.x
-    //         const dy = s2.y - s.y
-    //         const dz = s2.z - s.z
-    //         const dr2 = dx * dx + dy * dy + dz * dz
-    //         if (dr2 > 4 * r * r) continue
-    //         if (!nearest || dr2 < dist2) {
-    //           nearest = s2
-    //           dist2 = dr2
-    //         }
-    //       }
-    //     }
-    //     if (nearest) hit(s, nearest)
-    //   })
-    // }
-    // const ilmax = Math.floor(sq2.hitMap.imax / maskN) - Math.floor(sq2.hitMap.imin / maskN)
-    // const jlmax = Math.floor(sq2.hitMap.jmax / maskN) - Math.floor(sq2.hitMap.jmin / maskN)
-    // const klmax = Math.floor(sq2.hitMap.kmax / maskN) - Math.floor(sq2.hitMap.kmin / maskN)
-    // for (let i = 0; i <= ilmax; i++) {
-    //   for (let j = 0; j <= jlmax; j++) {
-    //     for (let k = 0; k <= klmax; k++) {
-    //       test(maskLevel - 1, i, j, k)
-    //     }
-    //   }
-    // }
     function hit(s, s2) {
       const dx = s2.x - s.x
       const dy = s2.y - s.y
