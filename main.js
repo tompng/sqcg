@@ -63,6 +63,7 @@ window.addEventListener('load', () => {
   document.body.appendChild(c)
 
   const renderer = new THREE.WebGLRenderer()
+  window.renderer = renderer
   document.body.appendChild(renderer.domElement)
   renderer.domElement.style.boxShadow = '0 0 1px black'
   const width = 800
@@ -74,6 +75,7 @@ window.addEventListener('load', () => {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100)
   camera.position.set(0, 0, 4)
+  window.camera = camera
   function createSquidTexture(color) {
     const texcanvas = document.createElement('canvas')
     texcanvas.width = texcanvas.height = 512
@@ -111,24 +113,31 @@ window.addEventListener('load', () => {
   }
   window.squids = squids
   addSquid(3)
-  const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial({ wireframe: true }))
+  const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial({ wireframe: false }))
   plane.position.set(0, 0, 0)
   plane.scale.set(8, 8, 8)
   scene.add(plane)
+  plane.receiveShadow = true
+
   const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
-  directionalLight.position.set(1, 2, 3)
+  directionalLight.castShadow = true
+  renderer.shadowMap.enabled = true
+  renderer.shadowMapType = THREE.PCFSoftShadowMap
+  directionalLight.shadow.mapSize.width = directionalLight.shadow.mapSize.height = 2048;
+  directionalLight.position.set(1,1,4)
   scene.add(directionalLight)
   document.body.onclick = () => {
     if (squids.length < 4) addSquid(3)
     else {
       const sq = squids.shift()
+      sq.meshGroup
       squids.push(sq)
       randomizeSquid(sq, 3)
     }
   }
   let cnt = 0
   function animate() {
-    const t = ++cnt * 0.01
+    const t = ++cnt * 0.05
     const zcos = Math.cos(0.24 * t)
     const zsin = Math.sin(0.24 * t)
 

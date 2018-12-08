@@ -179,22 +179,29 @@ class Squid {
     this.spheres = []
     this.sections = sections.map(section => {
       const material = ikaShader({ map: { value: this.texture } })
+      const depthMaterial = ikaDepthShader(material.uniforms)
       const mesh = new THREE.Mesh(section.geometry, material)
-      const wireMesh = new THREE.Mesh(wireCubeGeometry, material)
+      mesh.castShadow = mesh.receiveShadow = true
+      mesh.customDepthMaterial = depthMaterial
+      if (option.mesh) this.meshGroup.add(mesh)
       const spheres = section.spheres.map(s => {
-        let mesh
+        let sphereMesh
         if (option.hitSphere) {
-          mesh = new THREE.Mesh(sphereGeometry)
-          mesh.scale.set(s.r, s.r, s.r)
-          this.meshGroup.add(mesh)
+          sphereMesh = new THREE.Mesh(sphereGeometry, new THREE.MeshPhongMaterial)
+          sphereMesh.scale.set(s.r, s.r, s.r)
+          this.meshGroup.add(sphereMesh)
+          sphereMesh.castShadow = sphereMesh.receiveShadow = true
         }
-        const s2 = { i: section.i, j: section.j, base: { x: s.x, y: s.y, z: s.z }, r: s.r, mesh }
+        const s2 = { i: section.i, j: section.j, base: { x: s.x, y: s.y, z: s.z }, r: s.r, mesh: sphereMesh }
         this.spheres.push(s2)
         return s2
       })
-      if (option.mesh) this.meshGroup.add(mesh)
-      if (option.wire) this.meshGroup.add(wireMesh)
-      return { ...section, material, spheres }
+      if (option.wire) {
+        const wireMesh = new THREE.Mesh(wireCubeGeometry, material)
+        wireMesh.castShadow = wireMesh.receiveShadow = true
+        this.meshGroup.add(wireMesh)
+      }
+      return { ...section, material, depthMaterial, spheres }
     })
   }
   transform(si, sj, p) {
@@ -295,13 +302,14 @@ class Squid {
     for (const sec of this.sections) {
       const i = sec.i
       const j = sec.j
-      const uniforms = {}
-      this.eachBin3D((x,y,z) => {
+      const uniforms = sec.material.uniforms
+      this.eachBin3D((x, y, z) => {
+        const xyz = '' + x + y + z
         const v = this.jelly[i + x][j + y][z]
-        sec.material.uniforms['v' + x + y + z] = { value: new THREE.Vector3(v.x, v.y, v.z) }
-        sec.material.uniforms['vx' + x + y + z] = { value: new THREE.Vector3(v.xx, v.yx, v.zx) }
-        sec.material.uniforms['vy' + x + y + z] = { value: new THREE.Vector3(v.xy, v.yy, v.zy) }
-        sec.material.uniforms['vz' + x + y + z] = { value: new THREE.Vector3(v.xz, v.yz, v.zz) }
+        uniforms['v' + xyz] = { value: new THREE.Vector3(v.x, v.y, v.z) }
+        uniforms['vx' + xyz] = { value: new THREE.Vector3(v.xx, v.yx, v.zx) }
+        uniforms['vy' + xyz] = { value: new THREE.Vector3(v.xy, v.yy, v.zy) }
+        uniforms['vz' + xyz] = { value: new THREE.Vector3(v.xz, v.yz, v.zz) }
       })
     }
   }
