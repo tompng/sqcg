@@ -134,23 +134,27 @@ window.addEventListener('load', () => {
   }
   let running = true
   document.body.onkeypress = () => { running = !running }
-  function update() {
-    const dt = 0.05
-    for(let i = 0; i < 2; i++) {
-      squids.forEach(s => s.resetSphereForce())
-      squids.forEach(s => !s.countdown && s.hitFloor())
-      squids.forEach(s => s.calcHitMap())
-      squids.forEach(s1 => {
-        squids.forEach(s2 => {
-          if (s1 === s2 || s1.countdown || s2.countdown) return
-          Squid.hitBoth(s1, s2)
-        })
+  window.time = {}
+  function update(dt) {
+    squids.forEach(s => s.resetSphereForce())
+    squids.forEach(s => !s.countdown && s.hitFloor())
+    const t0 = performance.now()
+    squids.forEach(s => s.calcHitMap())
+    const t1 = performance.now()
+    squids.forEach(s1 => {
+      squids.forEach(s2 => {
+        if (s1 === s2 || s1.countdown || s2.countdown) return
+        Squid.hitBoth(s1, s2)
       })
-      squids.forEach(s => s.updateJelly(dt))
-      squids.forEach(s => s.calculateJellyXYZ())
-      squids.forEach(s => s.updateSpherePosition())
-    }
-    squids.forEach(s => s.updateMorph())
+    })
+    const t2 = performance.now()
+    squids.forEach(s => s.updateJelly(dt))
+    const t3 = performance.now()
+    time.prepare = (time.prepare||0) * 0.99 + 0.01 * (t1-t0)
+    time.hit = (time.hit||0) * 0.99 + 0.01 * (t2-t1)
+    time.update = (time.update||0) * 0.99 + 0.01 * (t3-t2)
+    squids.forEach(s => s.calculateJellyXYZ())
+    squids.forEach(s => s.updateSpherePosition())
   }
   let cnt = 0
   function animate() {
@@ -165,7 +169,10 @@ window.addEventListener('load', () => {
         }
       }
     })
-    if (running) update()
+    if (running) {
+      update(0.075)
+      squids.forEach(s => s.updateMorph())
+    }
     camera.up.set(0, 0, 1)
     camera.position.set(cameraDistance * Math.cos(0.2 * t), cameraDistance * Math.sin(0.2 * t), 2)
     camera.lookAt(0, 0, 1)
