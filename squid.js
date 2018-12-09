@@ -414,27 +414,27 @@ class Squid {
     const map = []
     const map2 = []
     const r = this.spheres[0].r
-    const seg = 2 * r
+    const seg = 4 * r
     const xs = this.spheres.map(s => s.x)
     const ys = this.spheres.map(s => s.y)
     const zs = this.spheres.map(s => s.z)
-    const imin = Math.floor(Math.min(...xs) / seg) - 1
-    const jmin = Math.floor(Math.min(...ys) / seg) - 1
-    const kmin = Math.floor(Math.min(...zs) / seg) - 1
-    const imax = Math.floor(Math.max(...xs) / seg) + 1
-    const jmax = Math.floor(Math.max(...ys) / seg) + 1
-    const kmax = Math.floor(Math.max(...zs) / seg) + 1
+    const imin = Math.floor(Math.min(...xs) / seg - 0.5)
+    const jmin = Math.floor(Math.min(...ys) / seg - 0.5)
+    const kmin = Math.floor(Math.min(...zs) / seg - 0.5)
+    const imax = Math.floor(Math.max(...xs) / seg - 0.5) + 1
+    const jmax = Math.floor(Math.max(...ys) / seg - 0.5) + 1
+    const kmax = Math.floor(Math.max(...zs) / seg - 0.5) + 1
     this.spheres.forEach(s => {
       const i = Math.floor(s.x / seg) - imin
       const j = Math.floor(s.y / seg) - jmin
       const k = Math.floor(s.z / seg) - kmin
+      const ii = Math.floor(s.x / seg - 0.5) - imin
+      const jj = Math.floor(s.y / seg - 0.5) - jmin
+      const kk = Math.floor(s.z / seg - 0.5) - kmin
       const idx = (i << 8) | (j << 4) | k
       ;(map[idx] = map[idx] || []).push(s)
-      for (let l = 0; l < 27; l++) {
-        const ii = i + l % 3 - 1
-        const jj = j + Math.floor(l / 3) % 3 - 1
-        const kk = k + Math.floor(l / 9) - 1
-        const idx2 = (ii << 8) | (jj << 4) | kk
+      for (let l = 0; l < 8; l++) {
+        const idx2 = ((ii + (l & 1)) << 8) | ((jj + ((l >> 1) & 1)) << 4) | (kk + (l >> 2))
         ;(map2[idx2] = map2[idx2] || []).push(s)
       }
     })
