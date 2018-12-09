@@ -442,6 +442,9 @@ class Squid {
     this.hitMap = { map, map2, imin, jmin, kmin, imax, jmax, kmax, seg, r }
   }
   static hitBoth(sq1, sq2) {
+    if (sq1.hitMap.imax < sq2.hitMap.imin || sq2.hitMap.imax < sq1.hitMap.imin) return
+    if (sq1.hitMap.jmax < sq2.hitMap.jmin || sq2.hitMap.jmax < sq1.hitMap.jmin) return
+    if (sq1.hitMap.kmax < sq2.hitMap.kmin || sq2.hitMap.kmax < sq1.hitMap.kmin) return
     const r = sq2.hitMap.r
     sq2.hitMap.map.forEach((spheres, idx) => {
       if (!spheres) return
