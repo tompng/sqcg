@@ -80,7 +80,7 @@ window.addEventListener('load', () => {
     texcanvas.width = texcanvas.height = 512
     const texctx = texcanvas.getContext('2d')
     texctx.scale(texcanvas.width, texcanvas.height)
-    texctx.fillStyle = color || 'white'
+    texctx.fillStyle = color || 'transparent'
     texctx.fillRect(0, 0, 1, 1)
     texctx.translate(0.5, 0.5)
     texctx.scale(0.5, 0.5)
@@ -89,13 +89,13 @@ window.addEventListener('load', () => {
     texture.needsUpdate = true
     return texture
   }
-  const colors = ['#F4A', '#CF4', '#F62', '#24F', '#4FD', '#E4F']
-  const textures = colors.map(c => createSquidTexture(c))
+  const colors = ['#F4A', '#CF4', '#F62', '#24F', '#4FD', '#E4F', '#FD3', '#FFF']
+  const texture = createSquidTexture()
   const squids = []
   function addSquid(z = 2) {
-    const texture = textures.shift()
-    textures.push(texture)
-    const sq = new Squid(ikaSections, numSections, texture, { hitSphere: false, mesh: true, wire: false })
+    const color = colors.shift()
+    colors.push(color)
+    const sq = new Squid(ikaSections, numSections, texture, color, { hitSphere: false, mesh: true, wire: false })
     randomizeSquid(sq, z)
     squids.push(sq)
     scene.add(sq.meshGroup)
@@ -170,7 +170,7 @@ window.addEventListener('load', () => {
       }
     })
     if (running) {
-      update(0.075)
+      update(0.05)
       squids.forEach(s => s.updateMorph())
     }
     camera.up.set(0, 0, 1)

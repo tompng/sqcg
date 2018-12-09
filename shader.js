@@ -120,6 +120,7 @@ void main() {
 `
 const ikaFragmentCode = `
 precision mediump float;
+uniform vec3 color;
 uniform sampler2D map;
 uniform sampler2D shadowmap;
 varying vec2 vtexcoord;
@@ -150,7 +151,8 @@ varying vec4 worldPosition;
 #include <clipping_planes_pars_fragment>
 
 void main() {
-  vec4 diffuseColor = texture2D(map, vtexcoord);
+  vec4 texColor = texture2D(map, vtexcoord);
+  vec4 diffuseColor = vec4(color * (1.0 - texColor.a) + texColor.a * texColor.rgb, 1);
   vec3 normal = normalize((viewMatrix * vec4(vnormal, 0)).xyz);
   float specularStrength;
   vec3 diffuse = vec3(1, 1, 1);

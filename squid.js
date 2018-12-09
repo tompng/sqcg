@@ -165,12 +165,13 @@ function geometryFromIkaSection(section) {
 
 const sphereGeometry = new THREE.SphereBufferGeometry(1, 32)
 class Squid {
-  constructor(sections, step, texture, option) {
+  constructor(sections, step, texture, color, option = {}) {
     this.xysize = sections[0].size
     this.zsize = 1
     this.step = step
     this.texture = texture
-    this.initializeMesh(sections, option || {})
+    this.color = new THREE.Color(color)
+    this.initializeMesh(sections, option)
     this.initializeJelly()
     this.randomJelly(0)
   }
@@ -178,7 +179,7 @@ class Squid {
     this.meshGroup = new THREE.Group()
     this.spheres = []
     this.sections = sections.map(section => {
-      const material = ikaShader({ map: { value: this.texture } })
+      const material = ikaShader({ map: { value: this.texture }, color: { value: this.color } })
       const depthMaterial = ikaDepthShader(material.uniforms)
       const mesh = new THREE.Mesh(section.geometry, material)
       mesh.castShadow = mesh.receiveShadow = true
