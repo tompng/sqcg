@@ -413,57 +413,65 @@ class Squid {
   }
   calcHitMap() {
     const map = []
-    const map2 = []
     const r = this.spheres[0].r
-    const seg = 4 * r
+    const seg = 2 * r
     const xs = this.spheres.map(s => s.x)
     const ys = this.spheres.map(s => s.y)
     const zs = this.spheres.map(s => s.z)
-    const imin = Math.floor(Math.min(...xs) / seg - 0.5)
-    const jmin = Math.floor(Math.min(...ys) / seg - 0.5)
-    const kmin = Math.floor(Math.min(...zs) / seg - 0.5)
-    const imax = Math.floor(Math.max(...xs) / seg - 0.5) + 1
-    const jmax = Math.floor(Math.max(...ys) / seg - 0.5) + 1
-    const kmax = Math.floor(Math.max(...zs) / seg - 0.5) + 1
+    const xmin = Math.min(...xs), xmax = Math.max(...xs)
+    const ymin = Math.min(...ys), ymax = Math.max(...ys)
+    const zmin = Math.min(...zs), zmax = Math.max(...zs)
+    const imin = Math.floor(xmin / seg)
+    const jmin = Math.floor(ymin / seg)
+    const kmin = Math.floor(zmin / seg)
+    const imax = Math.floor(xmax / seg)
+    const jmax = Math.floor(ymax / seg)
+    const kmax = Math.floor(zmax / seg)
     this.spheres.forEach(s => {
       const i = Math.floor(s.x / seg) - imin
       const j = Math.floor(s.y / seg) - jmin
       const k = Math.floor(s.z / seg) - kmin
-      const ii = Math.floor(s.x / seg - 0.5) - imin
-      const jj = Math.floor(s.y / seg - 0.5) - jmin
-      const kk = Math.floor(s.z / seg - 0.5) - kmin
       const idx = (i << 8) | (j << 4) | k
       ;(map[idx] = map[idx] || []).push(s)
-      for (let l = 0; l < 8; l++) {
-        const idx2 = ((ii + (l & 1)) << 8) | ((jj + ((l >> 1) & 1)) << 4) | (kk + (l >> 2))
-        ;(map2[idx2] = map2[idx2] || []).push(s)
-      }
     })
-    this.hitMap = { map, map2, imin, jmin, kmin, imax, jmax, kmax, seg, r }
+    this.hitMap = { map, imin, jmin, kmin, imax, jmax, kmax, xmin, xmax, ymin, ymax, zmin, zmax, seg, r }
   }
   static hitBoth(sq1, sq2) {
-    if (sq1.hitMap.imax < sq2.hitMap.imin || sq2.hitMap.imax < sq1.hitMap.imin) return
-    if (sq1.hitMap.jmax < sq2.hitMap.jmin || sq2.hitMap.jmax < sq1.hitMap.jmin) return
-    if (sq1.hitMap.kmax < sq2.hitMap.kmin || sq2.hitMap.kmax < sq1.hitMap.kmin) return
-    const r = sq2.hitMap.r
-    sq2.hitMap.map.forEach((spheres, idx) => {
+    const h1 = sq1.hitMap
+    const h2 = sq2.hitMap
+    const { seg, r } = h1
+    if (h1.xmax + 2 * r < h2.xmin || h2.xmax + 2 * r < h1.xmin) return
+    if (h1.ymax + 2 * r < h2.ymin || h2.ymax + 2 * r < h1.ymin) return
+    if (h1.zmax + 2 * r < h2.zmin || h2.zmax + 2 * r < h1.zmin) return
+    h2.map.forEach((spheres, idx) => {
       if (!spheres) return
-      const i = (idx >> 8) + sq2.hitMap.imin  - sq1.hitMap.imin
-      const j = ((idx >> 4) & 0xf) + sq2.hitMap.jmin - sq1.hitMap.jmin
-      const k = (idx & 0xf) + sq2.hitMap.kmin  - sq1.hitMap.kmin
-      if (i < 0 || j < 0 || k < 0 || i >= 16 || j >= 16 || k >= 16) return
-      const targets = sq1.hitMap.map2[(i << 8) | (j << 4) | k]
-      if (!targets) return
+      const ii = (idx >> 8) + h2.imin  - h1.imin
+      const jj = ((idx >> 4) & 0xf) + h2.jmin - h1.jmin
+      const kk = (idx & 0xf) + h2.kmin  - h1.kmin
+      const ifrom = Math.max(ii - 1, 0), ito = Math.min(ii + 1, h1.imax - h1.imin)
+      const jfrom = Math.max(jj - 1, 0), jto = Math.min(jj + 1, h1.jmax - h1.jmin)
+      const kfrom = Math.max(kk - 1, 0), kto = Math.min(kk + 1, h1.kmax - h1.kmin)
+      const targetList = []
+      for (let i = ifrom; i <= ito; i++) {
+        for (let j = jfrom; j <= jto; j++) {
+          for (let k = kfrom; k <= kto; k++) {
+            const spheres1 = h1.map[(i << 8) | (j << 4) | k]
+            if (spheres1) targetList.push(spheres1)
+          }
+        }
+      }
       for (const s of spheres) {
         let nearest, dist2 = 4 * r * r
-        for (const s2 of targets) {
-          const dx = s2.x - s.x
-          const dy = s2.y - s.y
-          const dz = s2.z - s.z
-          const dr2 = dx * dx + dy * dy + dz * dz
-          if (dr2 < dist2) {
-            nearest = s2
-            dist2 = dr2
+        for (const targets of targetList) {
+          for (const s2 of targets) {
+            const dx = s2.x - s.x
+            const dy = s2.y - s.y
+            const dz = s2.z - s.z
+            const dr2 = dx * dx + dy * dy + dz * dz
+            if (dr2 < dist2) {
+              nearest = s2
+              dist2 = dr2
+            }
           }
         }
         if (nearest) hit(s, nearest)
