@@ -13,7 +13,8 @@ onload = () => {
   ctx.stroke()
   sqDrawEyes(ctx)
 }
-let cameraDistance = 6
+let cameraDistance = 12
+let numCalcs = 2
 window.addEventListener('load', () => {
   function showMap(map) {
     const size = map.length
@@ -65,8 +66,8 @@ window.addEventListener('load', () => {
   window.renderer = renderer
   document.body.appendChild(renderer.domElement)
   renderer.domElement.style.boxShadow = '0 0 1px black'
-  const width = 1500
-  const height = 800
+  const width = 800
+  const height = 600
   renderer.setSize(width, height)
   renderer.domElement.style.width = width + 'px'
   renderer.domElement.style.height = height + 'px'
@@ -111,7 +112,7 @@ window.addEventListener('load', () => {
   addSquid(3)
   const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial)
   plane.position.set(0, 0, 0)
-  plane.scale.set(8, 8, 8)
+  plane.scale.set(10, 10, 10)
   scene.add(plane)
   plane.receiveShadow = true
 
@@ -123,7 +124,7 @@ window.addEventListener('load', () => {
   directionalLight.position.set(2,1,3)
   scene.add(directionalLight)
   document.body.onclick = () => {
-    if (squids.length < 12) {
+    if (squids.length < 8) {
       addSquid(3)
     } else {
       const sq = squids.shift()
@@ -133,7 +134,18 @@ window.addEventListener('load', () => {
     }
   }
   let running = true
-  document.body.onkeypress = () => { running = !running }
+  let wasd = { w: false, a: false, s: false, d: false }
+  function keychanged(code, flag) {
+    if (code == 87) wasd.w = flag
+    if (code == 65) wasd.a = flag
+    if (code == 83) wasd.s = flag
+    if (code == 68) wasd.d = flag
+  }
+  document.body.onkeyup = e => keychanged(e.keyCode, false)
+  document.body.onkeydown = e => keychanged(e.keyCode, true)
+  document.body.onkeypress = e => {
+    if (e.keyCode === 32) running = !running
+  }
   window.time = {}
   function update(dt) {
     squids.forEach(s => s.resetSphereForce())
@@ -147,6 +159,7 @@ window.addEventListener('load', () => {
         Squid.hitBoth(s1, s2)
       })
     })
+    squids[0].action(wasd)
     const t2 = performance.now()
     squids.forEach(s => s.updateJelly(dt))
     const t3 = performance.now()
@@ -158,7 +171,7 @@ window.addEventListener('load', () => {
   }
   let cnt = 0
   function animate() {
-    const t = ++cnt * 0.05
+    const t = ++cnt * 0.01
     const zcos = Math.cos(0.24 * t)
     const zsin = Math.sin(0.24 * t)
     squids.forEach(sq => {
@@ -170,12 +183,12 @@ window.addEventListener('load', () => {
       }
     })
     if (running) {
-      update(0.05)
+      for (let i = 0; i < numCalcs; i++) update(0.05)
       squids.forEach(s => s.updateMorph())
     }
     camera.up.set(0, 0, 1)
-    camera.position.set(cameraDistance * Math.cos(0.2 * t), cameraDistance * Math.sin(0.2 * t), 2)
-    camera.lookAt(0, 0, 1)
+    camera.position.set(cameraDistance * Math.cos(0.2 * t), cameraDistance * Math.sin(0.2 * t), 4)
+    camera.lookAt(0, 0, 0)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
   }

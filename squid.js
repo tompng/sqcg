@@ -174,6 +174,10 @@ class Squid {
     this.initializeMesh(sections, option)
     this.initializeJelly()
     this.randomJelly(0)
+    this.eachCoord((i, j, k) => {
+      const p = this.jelly[i][j][k]
+      p.fx = p.fy = p.fz = 0
+    })
   }
   initializeMesh(sections, option = {}) {
     this.meshGroup = new THREE.Group()
@@ -326,10 +330,6 @@ class Squid {
     this.spheres.forEach(s => { s.fx = s.fy = s.fz = 0 })
   }
   updateJelly(dt) {
-    this.eachCoord((i, j, k) => {
-      const p = this.jelly[i][j][k]
-      p.fx = p.fy = p.fz = 0
-    })
     this.eachCoord((ia,ja,ka) => {
       this.eachCoord((ib,jb,kb) => {
         const pa = this.jelly[ia][ja][ka]
@@ -402,13 +402,31 @@ class Squid {
       p.vy += p.fy * dt
       p.vz += p.fz * dt - 0.05 * dt
     })
+    this.eachCoord((i, j, k) => {
+      const p = this.jelly[i][j][k]
+      p.fx = p.fy = p.fz = 0
+    })
   }
   hitFloor() {
+    const range = 5
     this.spheres.forEach(s => {
-      if (s.z > s.r) return
-      s.fz += (s.r - s.z) + (s.vz < 0 ? -2.5 * s.vz : 0)
-      s.fx += -0.25 * s.vx
-      s.fy += -0.25 * s.vy
+      if (s.z < s.r) {
+        s.fz += (s.r - s.z) + (s.vz < 0 ? -2.5 * s.vz : 0)
+        s.fx += -0.25 * s.vx
+        s.fy += -0.25 * s.vy
+      }
+      if (s.x < -range + s.r || s.x > range - s.r) {
+        const t = s.x < 0 ? -range + s.r : range - s.r
+        s.fx += (t - s.x) + (s.vx < 0 ? -2.5 * s.vx : 0)
+        s.fz += -0.25 * s.vz
+        s.fy += -0.25 * s.vy
+      }
+      if (s.y < -range + s.r || s.y > range - s.r) {
+        const t = s.y < 0 ? -range + s.r : range - s.r
+        s.fy += (t - s.y) + (s.vy < 0 ? -2.5 * s.vy : 0)
+        s.fz += -0.25 * s.vz
+        s.fx += -0.25 * s.vx
+      }
     })
   }
   calcHitMap() {
@@ -435,6 +453,84 @@ class Squid {
       ;(map[idx] = map[idx] || []).push(s)
     })
     this.hitMap = { map, imin, jmin, kmin, imax, jmax, kmax, xmin, xmax, ymin, ymax, zmin, zmax, seg, r }
+  }
+  action(wasd) {
+    const position = { x: 0, y: 0, z: 0, w: 0 }
+    const velocity = { x: 0, y: 0, z: 0, w: 0 }
+    const axisX = { x: 0, y: 0, z: 0 }
+    const axisY = { x: 0, y: 0, z: 0 }
+    const axisZ = { x: 0, y: 0, z: 0 }
+    this.eachCoord((i, j, k) => {
+      const p = this.jelly[i][j][k]
+      const px = i < this.step && this.jelly[i + 1][j][k]
+      const py = j < this.step && this.jelly[i][j + 1][k]
+      const pz = k < this.step && this.jelly[i][j][k + 1]
+      position.x += p.x
+      position.y += p.y
+      position.z += p.z
+      velocity.x += p.vx
+      velocity.y += p.vy
+      velocity.z += p.vz
+      velocity.w ++
+      if (px) {
+        axisX.x += px.x - p.x
+        axisX.y += px.y - p.y
+        axisX.z += px.z - p.z
+      }
+      if (py) {
+        axisY.x += py.x - p.x
+        axisY.y += py.y - p.y
+        axisY.z += py.z - p.z
+      }
+      if (pz) {
+        axisZ.x += pz.x - p.x
+        axisZ.y += pz.y - p.y
+        axisZ.z += pz.z - p.z
+      }
+    })
+    function normalize(v) {
+      const weight = v.w === undefined ? Math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2) : v.w
+      if (v.w !== undefined) v.w = 1
+      v.x /= weight
+      v.y /= weight
+      v.z /= weight
+    }
+    normalize(position)
+    normalize(axisX)
+    normalize(axisY)
+    normalize(axisZ)
+    const vforward = axisX.x * velocity.x + axisX.y * velocity.y + axisX.z * velocity.z
+    console.error(vforward)
+    this.eachCoord((i, j, k) => {
+      const p = this.jelly[i][j][k]
+      const f = (i - this.step / 2)
+      const fw = 0.2 * (1 + Math.sin(8 * performance.now() / 1000))
+      const ff = (wasd.w ? 0.01 : 0.001) * Math.max(20 - vforward, 0)
+      p.fx += axisX.x * (f * fw + ff)
+      p.fy += axisX.y * (f * fw + ff)
+      p.fz += axisX.z * (f * fw + ff)
+    })
+    if (wasd.a || wasd.d) {
+      this.eachCoord((i, j, k) => {
+        const p = this.jelly[i][j][k]
+        const f = 2 * i / this.step - 1
+        const dir = 0.2 * ((wasd.a ? 1 : 0) - (wasd.d ? 1 : 0))
+        p.fx += axisY.x * f * dir
+        p.fy += axisY.y * f * dir
+        p.fz += axisY.z * f * dir
+      })
+    }
+    if (wasd.s) {
+      this.eachCoord((i, j, k) => {
+        const p = this.jelly[i][j][k]
+        const f = 0.5 * (2 * i / this.step - 1)
+        if (f < 0) return
+        const f3 = axisZ.z ** 3
+        p.fx += axisZ.x * f * f3
+        p.fy += axisZ.y * f * f3
+        p.fz += axisZ.z * f * f3
+      })
+    }
   }
   static hitBoth(sq1, sq2) {
     const h1 = sq1.hitMap
