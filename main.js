@@ -196,7 +196,7 @@ window.addEventListener('load', () => {
     requestAnimationFrame(animate)
   }
   animate()
-  document.body.onClick = () => {
+  document.body.onclick = () => {
     if (DeviceMotionEvent.requestPermission)
     DeviceMotionEvent.requestPermission()
     document.body.onClick = null
@@ -205,7 +205,7 @@ window.addEventListener('load', () => {
     const { x, y, z } = e.accelerationIncludingGravity
     const r = Math.hypot(x, y, z)
     const scale = 0.01 * (r > 10 ? 10 / r : 1)
-    windwo.gx = x * scale
+    window.gx = x * scale
     window.gy = y * scale
     window.gz = z * scale
   })
