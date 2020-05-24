@@ -424,13 +424,13 @@ class Squid {
       }
       if (s.x < -range + s.r || s.x > range - s.r) {
         const t = s.x < 0 ? -range + s.r : range - s.r
-        s.fx += (t - s.x) + (s.x > 0 ^ s.vx > 0 ? -2.5 * s.vx : 0)
+        s.fx += (t - s.x) + (s.x > 0 ^ s.vx > 0 ? 0 : -2.5 * s.vx)
         // s.fz += -0.25 * s.vz
         // s.fy += -0.25 * s.vy
       }
       if (s.y < -range + s.r || s.y > range - s.r) {
         const t = s.y < 0 ? -range + s.r : range - s.r
-        s.fy += (t - s.y) + (s.y > 0 ^ s.vy > 0 ? -2.5 * s.vy : 0)
+        s.fy += (t - s.y) + (s.y > 0 ^ s.vy > 0 ? 0 : -2.5 * s.vy)
         // s.fz += -0.25 * s.vz
         // s.fx += -0.25 * s.vx
       }

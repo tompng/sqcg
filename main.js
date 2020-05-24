@@ -75,8 +75,6 @@ function start() {
     width: 100vmin;
     height: 100vmin;
   `
-  renderer.domElement.style.width = width + 'px'
-  renderer.domElement.style.height = height + 'px'
   renderer.setPixelRatio(window.devicePixelRatio)
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(30, width / height, 0.1, 100)
@@ -99,23 +97,28 @@ function start() {
   const colors = ['#F4A', '#CF4', '#F62', '#24F', '#4FD', '#E4F', '#FD3', '#FFF']
   const texture = createSquidTexture()
   const squids = []
-  function addSquid(z = 2) {
+  function addSquid(i) {
     const color = colors.shift()
     colors.push(color)
     const sq = new Squid(ikaSections, numSections, texture, color, { hitSphere: false, mesh: true, wire: false })
-    randomizeSquid(sq, z)
+    randomizeSquid(sq, 2, i)
     squids.push(sq)
     scene.add(sq.meshGroup)
   }
-  function randomizeSquid(sq, z) {
+  function randomizeSquid(sq, z, i = undefined) {
     sq.randomJelly(16 * Math.random())
-    sq.setPosition({ x: 4 * Math.random() - 2, y: 0, z: z })
+    if (i === undefined) {
+      sq.setPosition({ x: 2 * Math.random() - 1, y: 2 * Math.random() - 1, z })
+    } else {
+      const th = 2 * Math.PI * i / 3
+      sq.setPosition({ x: 2 * Math.cos(th), y: 2 * Math.sin(th), z })
+    }
     sq.calculateJellyXYZ()
     sq.updateSpherePosition()
     sq.updateMorph()
   }
   window.squids = squids
-  addSquid()
+  for(let i = 0; i < 3; i++) addSquid(i)
   const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial)
   plane.position.set(0, 0, 0)
   plane.scale.set(6, 6, 6)
