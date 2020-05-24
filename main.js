@@ -2,7 +2,7 @@ onload = () => {
   const canvas = document.createElement('canvas')
   const size = 1024
   canvas.width = canvas.height = size
-  document.body.appendChild(canvas)
+  // document.body.appendChild(canvas)
   const ctx = canvas.getContext('2d')
   ctx.save()
   ctx.translate(size / 2, size / 2)
@@ -14,8 +14,8 @@ onload = () => {
   sqDrawEyes(ctx)
 }
 let cameraDistance = 12
-let numCalcs = 2
-window.addEventListener('load', () => {
+let numCalcs = 4
+function start() {
   function showMap(map) {
     const size = map.length
     const c=document.createElement('canvas')
@@ -32,7 +32,7 @@ window.addEventListener('load', () => {
       d.data[k+3] = 0xff
     })
     g.putImageData(d, 0, 0)
-    document.body.appendChild(c)
+    // document.body.appendChild(c)
   }
 
   const c=document.createElement('canvas')
@@ -60,15 +60,21 @@ window.addEventListener('load', () => {
     }
     g.restore()
   }
-  document.body.appendChild(c)
+  // document.body.appendChild(c)
 
   const renderer = new THREE.WebGLRenderer()
   window.renderer = renderer
   document.body.appendChild(renderer.domElement)
-  renderer.domElement.style.boxShadow = '0 0 1px black'
   const width = 800
-  const height = 600
+  const height = 800
   renderer.setSize(width, height)
+  renderer.domElement.style.cssText = `
+    position:fixed;
+    left:0;
+    top:0;
+    width: 100vmin;
+    height: 100vmin;
+  `
   renderer.domElement.style.width = width + 'px'
   renderer.domElement.style.height = height + 'px'
   renderer.setPixelRatio(window.devicePixelRatio)
@@ -112,7 +118,7 @@ window.addEventListener('load', () => {
   addSquid()
   const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial)
   plane.position.set(0, 0, 0)
-  plane.scale.set(10, 10, 10)
+  plane.scale.set(6, 6, 6)
   scene.add(plane)
   plane.receiveShadow = true
 
@@ -123,7 +129,7 @@ window.addEventListener('load', () => {
   directionalLight.shadow.mapSize.width = directionalLight.shadow.mapSize.height = 2048;
   directionalLight.position.set(2,1,3)
   scene.add(directionalLight)
-  document.body.onclick = () => {
+  document.addEventListener('click', () => {
     if (squids.length < 3) {
       addSquid()
     } else {
@@ -132,7 +138,7 @@ window.addEventListener('load', () => {
       squids.push(sq)
       sq.countdown = 20
     }
-  }
+  })
   let running = true
   let wasd = { w: false, a: false, s: false, d: false }
   function keychanged(code, flag) {
@@ -148,7 +154,6 @@ window.addEventListener('load', () => {
   }
   window.time = {}
   function update(dt) {
-    for(let k=0;k<4;k++){
     squids.forEach(s => s.resetSphereForce())
     squids.forEach(s => !s.countdown && s.hitFloor())
     const t0 = performance.now()
@@ -169,7 +174,6 @@ window.addEventListener('load', () => {
     time.update = (time.update||0) * 0.99 + 0.01 * (t3-t2)
     squids.forEach(s => s.calculateJellyXYZ())
     squids.forEach(s => s.updateSpherePosition())
-    }
   }
   let cnt = 0
   function animate() {
@@ -180,7 +184,7 @@ window.addEventListener('load', () => {
       if (sq.countdown) {
         sq.countdown--
         if (sq.countdown === 0) {
-          randomizeSquid(sq, 4)
+          randomizeSquid(sq, 2)
         }
       }
     })
@@ -190,16 +194,16 @@ window.addEventListener('load', () => {
     }
     // camera.up.set(0, 0, 1)
     // camera.position.set(cameraDistance * Math.cos(0.2 * t), cameraDistance * Math.sin(0.2 * t), 4)
-    camera.position.set(0, 0, 16)
+    camera.position.set(0, 0, 12)
     camera.lookAt(0, 0, 0)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
   }
   animate()
-  document.body.ontouchstart = () => {
+  document.body.onclick = () => {
     if (DeviceMotionEvent.requestPermission)
     DeviceMotionEvent.requestPermission()
-    document.body.onClick = null
+    document.body.onclick = null
   }
   window.addEventListener('devicemotion', e => {
     const { x, y, z } = e.accelerationIncludingGravity
@@ -209,4 +213,5 @@ window.addEventListener('load', () => {
     window.gy = y * scale
     window.gz = z * scale
   })
-})
+}
+window.addEventListener('load', start)
