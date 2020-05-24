@@ -1,5 +1,5 @@
 const ikaShape = coordsShrink3D()
-const numSections = 5
+const numSections = 3
 const wireCubeGeometry = createWireCubeGeometry()
 const ikaSections = createIkaSections(numSections)
 function createIkaSections(step) {
@@ -398,9 +398,9 @@ class Squid {
       p.x += p.vx * dt
       p.y += p.vy * dt
       p.z += p.vz * dt
-      p.vx += p.fx * dt
-      p.vy += p.fy * dt
-      p.vz += p.fz * dt - 0.05 * dt
+      p.vx += p.fx * dt + (window.gx||0) * dt
+      p.vy += p.fy * dt + (window.gy||0) * dt
+      p.vz += p.fz * dt + (window.gz||-0.1) * dt
     })
     this.eachCoord((i, j, k) => {
       const p = this.jelly[i][j][k]
@@ -409,21 +409,28 @@ class Squid {
   }
   hitFloor() {
     const range = 5
+    const zrange = 5
     this.spheres.forEach(s => {
       if (s.z < s.r) {
         s.fz += (s.r - s.z) + (s.vz < 0 ? -2.5 * s.vz : 0)
         s.fx += -0.25 * s.vx
         s.fy += -0.25 * s.vy
       }
+      if (s.z > zrange - s.r) {
+        const t = zrange - s.r
+        s.fz += (t - s.z) + (s.vz > 0 ? -2.5 * s.vz : 0)
+        s.fx += -0.25 * s.vx
+        s.fy += -0.25 * s.vy
+      }
       if (s.x < -range + s.r || s.x > range - s.r) {
         const t = s.x < 0 ? -range + s.r : range - s.r
-        s.fx += (t - s.x) + (s.vx < 0 ? -2.5 * s.vx : 0)
+        s.fx += (t - s.x) + (s.x > 0 ^ s.vx > 0 ? -2.5 * s.vx : 0)
         s.fz += -0.25 * s.vz
         s.fy += -0.25 * s.vy
       }
       if (s.y < -range + s.r || s.y > range - s.r) {
         const t = s.y < 0 ? -range + s.r : range - s.r
-        s.fy += (t - s.y) + (s.vy < 0 ? -2.5 * s.vy : 0)
+        s.fy += (t - s.y) + (x.y > 0 ^ s.vy > 0 ? -2.5 * s.vy : 0)
         s.fz += -0.25 * s.vz
         s.fx += -0.25 * s.vx
       }
@@ -500,7 +507,7 @@ class Squid {
     normalize(axisY)
     normalize(axisZ)
     const vforward = axisX.x * velocity.x + axisX.y * velocity.y + axisX.z * velocity.z
-    console.error(vforward)
+    // console.error(vforward)
     this.eachCoord((i, j, k) => {
       const p = this.jelly[i][j][k]
       const f = (i - this.step / 2)

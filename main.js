@@ -109,7 +109,7 @@ window.addEventListener('load', () => {
     sq.updateMorph()
   }
   window.squids = squids
-  addSquid(3)
+  addSquid()
   const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial)
   plane.position.set(0, 0, 0)
   plane.scale.set(10, 10, 10)
@@ -124,13 +124,13 @@ window.addEventListener('load', () => {
   directionalLight.position.set(2,1,3)
   scene.add(directionalLight)
   document.body.onclick = () => {
-    if (squids.length < 8) {
-      addSquid(3)
+    if (squids.length < 3) {
+      addSquid()
     } else {
       const sq = squids.shift()
       sq.meshGroup
       squids.push(sq)
-      sq.countdown = 80
+      sq.countdown = 20
     }
   }
   let running = true
@@ -148,6 +148,7 @@ window.addEventListener('load', () => {
   }
   window.time = {}
   function update(dt) {
+    for(let k=0;k<4;k++){
     squids.forEach(s => s.resetSphereForce())
     squids.forEach(s => !s.countdown && s.hitFloor())
     const t0 = performance.now()
@@ -159,7 +160,7 @@ window.addEventListener('load', () => {
         Squid.hitBoth(s1, s2)
       })
     })
-    squids[0].action(wasd)
+    // squids[0].action(wasd)
     const t2 = performance.now()
     squids.forEach(s => s.updateJelly(dt))
     const t3 = performance.now()
@@ -168,6 +169,7 @@ window.addEventListener('load', () => {
     time.update = (time.update||0) * 0.99 + 0.01 * (t3-t2)
     squids.forEach(s => s.calculateJellyXYZ())
     squids.forEach(s => s.updateSpherePosition())
+    }
   }
   let cnt = 0
   function animate() {
@@ -186,11 +188,25 @@ window.addEventListener('load', () => {
       for (let i = 0; i < numCalcs; i++) update(0.05)
       squids.forEach(s => s.updateMorph())
     }
-    camera.up.set(0, 0, 1)
-    camera.position.set(cameraDistance * Math.cos(0.2 * t), cameraDistance * Math.sin(0.2 * t), 4)
+    // camera.up.set(0, 0, 1)
+    // camera.position.set(cameraDistance * Math.cos(0.2 * t), cameraDistance * Math.sin(0.2 * t), 4)
+    camera.position.set(0, 0, 16)
     camera.lookAt(0, 0, 0)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
   }
   animate()
+  document.body.onClick = () => {
+    if (DeviceMotionEvent.requestPermission)
+    DeviceMotionEvent.requestPermission()
+    document.body.onClick = null
+  }
+  window.addEventListener('devicemotion', e => {
+    const { x, y, z } = e.accelerationIncludingGravity
+    const r = Math.hypot(x, y, z)
+    const scale = 0.01 * (r > 10 ? 10 / r : 1)
+    windwo.gx = x * scale
+    window.gy = y * scale
+    window.gz = z * scale
+  })
 })
