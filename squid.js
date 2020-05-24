@@ -407,8 +407,7 @@ class Squid {
       p.fx = p.fy = p.fz = 0
     })
   }
-  hitFloor() {
-    const range = 3
+  hitFloor(wsize = 3, hsize = 3) {
     const zrange = 3
     this.spheres.forEach(s => {
       if (s.z < s.r) {
@@ -422,14 +421,14 @@ class Squid {
         // s.fx += -0.25 * s.vx
         // s.fy += -0.25 * s.vy
       }
-      if (s.x < -range + s.r || s.x > range - s.r) {
-        const t = s.x < 0 ? -range + s.r : range - s.r
+      if (s.x < -wsize + s.r || s.x > wsize - s.r) {
+        const t = s.x < 0 ? -wsize + s.r : wsize - s.r
         s.fx += (t - s.x) + (s.x > 0 ^ s.vx > 0 ? 0 : -2.5 * s.vx)
         // s.fz += -0.25 * s.vz
         // s.fy += -0.25 * s.vy
       }
-      if (s.y < -range + s.r || s.y > range - s.r) {
-        const t = s.y < 0 ? -range + s.r : range - s.r
+      if (s.y < -hsize + s.r || s.y > hsize - s.r) {
+        const t = s.y < 0 ? -hsize + s.r : hsize - s.r
         s.fy += (t - s.y) + (s.y > 0 ^ s.vy > 0 ? 0 : -2.5 * s.vy)
         // s.fz += -0.25 * s.vz
         // s.fx += -0.25 * s.vx

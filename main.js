@@ -65,19 +65,32 @@ function start() {
   const renderer = new THREE.WebGLRenderer()
   window.renderer = renderer
   document.body.appendChild(renderer.domElement)
-  const width = 800
-  const height = 800
-  renderer.setSize(width, height)
   renderer.domElement.style.cssText = `
     position:fixed;
     left:0;
     top:0;
-    width: 100vmin;
-    height: 100vmin;
   `
+  let camera = null
+  let wsize = 3
+  let hsize = 3
+  resize = () => {
+    renderer.setSize(innerWidth, innerHeight)
+    if (innerWidth > innerHeight) {
+      camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 100)
+    } else {
+      const fov1 = 30
+      const fov = 2 * 180 / Math.PI * Math.atan(Math.tan(fov1 * Math.PI / 180 / 2) * innerHeight / innerWidth)
+      camera = new THREE.PerspectiveCamera(fov, innerWidth / innerHeight, 0.1, 16)
+    }
+    const vmin =Math.min(innerWidth, innerHeight)
+    wsize = 3 * innerWidth / vmin
+    hsize = 3 * innerHeight / vmin
+  }
+  resize()
+  window.addEventListener('resize', resize)
   renderer.setPixelRatio(window.devicePixelRatio)
   const scene = new THREE.Scene()
-  const camera = new THREE.PerspectiveCamera(30, width / height, 0.1, 100)
+
   camera.position.set(0, 0, 4)
   window.camera = camera
   function createSquidTexture(color) {
@@ -119,11 +132,31 @@ function start() {
   }
   window.squids = squids
   for(let i = 0; i < 3; i++) addSquid(i)
-  const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(1, 1, 16, 16), new THREE.MeshPhongMaterial)
+  const planeGeoetry = new THREE.PlaneBufferGeometry(1, 1, 1, 1)
+  const planeMaterial = new THREE.MeshPhongMaterial
+  const plane = new THREE.Mesh(planeGeoetry, planeMaterial)
   plane.position.set(0, 0, 0)
-  plane.scale.set(6, 6, 6)
-  scene.add(plane)
+  plane.scale.set(60, 60, 1)
   plane.receiveShadow = true
+  scene.add(plane)
+  const walls = []
+  for (let i = 0; i < 4; i++) {
+    const material = [
+      new THREE.MeshBasicMaterial({ color: '#444' }),
+      planeMaterial,
+      planeMaterial,
+      new THREE.MeshBasicMaterial({ color: '#333' })
+    ][i]
+    const plane = new THREE.Mesh(planeGeoetry, material)
+    const th = Math.PI * i / 2
+    plane.rotateOnAxis(new THREE.Vector3(Math.cos(th), Math.sin(th), 0), Math.PI / 2)
+    plane.position.set(-3 * Math.sin(th), 3 * Math.cos(th), 0)
+    if (i % 2 === 0) plane.scale.set(60, 6, 1)
+    else plane.scale.set(6, 60, 1)
+    plane.receiveShadow = true
+    scene.add(plane)
+    walls.push(plane)
+  }
 
   const directionalLight = new THREE.DirectionalLight(0xEEEEEE)
   directionalLight.castShadow = true
@@ -135,10 +168,10 @@ function start() {
   let target = null
   function pointerPos(e) {
     const dom = renderer.domElement
-    const sx = 2 * (e.pageX - dom.offsetLeft) / dom.offsetWidth - 1
-    const sy = 1 - 2 * (e.pageY - dom.offsetTop) / dom.offsetHeight
+    const sx = (2 * (e.pageX - dom.offsetLeft) / dom.offsetWidth - 1) * wsize
+    const sy = (1 - 2 * (e.pageY - dom.offsetTop) / dom.offsetHeight) * hsize
     const cz = camera.position.z
-    const v = { x: sx, y: sy, z: -1 / Math.tan(Math.PI / 180 * camera.fov / 2) }
+    const v = { x: sx, y: sy, z: -cz }//-1 / Math.tan(Math.PI / 180 * camera.fov / 2) }
     return { cz, v }
   }
   function calcDestination(cz, v) {
@@ -190,7 +223,7 @@ function start() {
     down(e.touches[0])
   }, { passive: false })
   window.addEventListener('touchmove', e => move(e.touches[0]))
-  window.addEventListener('touchup', up)
+  window.addEventListener('touchend', up)
 
   let running = true
   let wasd = { w: false, a: false, s: false, d: false }
@@ -208,7 +241,7 @@ function start() {
   window.time = {}
   function update(dt) {
     squids.forEach(s => s.resetSphereForce())
-    squids.forEach(s => !s.countdown && s.hitFloor())
+    squids.forEach(s => !s.countdown && s.hitFloor(wsize, hsize))
     if (target) {
       const dx = target.destination.x - target.sphere.x
       const dy = target.destination.y - target.sphere.y
@@ -244,6 +277,10 @@ function start() {
   }
   let cnt = 0
   function animate() {
+    walls[1].position.x = -wsize
+    walls[3].position.x = wsize
+    walls[0].position.y = hsize
+    walls[2].position.y = -hsize
     const t = ++cnt * 0.01
     const zcos = Math.cos(0.24 * t)
     const zsin = Math.sin(0.24 * t)
@@ -261,7 +298,7 @@ function start() {
     }
     // camera.up.set(0, 0, 1)
     // camera.position.set(cameraDistance * Math.cos(0.2 * t), cameraDistance * Math.sin(0.2 * t), 4)
-    camera.position.set(0, 0, 12)
+    camera.position.set(0, 0, 13)
     camera.lookAt(0, 0, 0)
     renderer.render(scene, camera)
     requestAnimationFrame(animate)
