@@ -310,12 +310,31 @@ function start() {
     requestAnimationFrame(animate)
   }
   animate()
-  document.body.onclick = () => {
-    if (DeviceMotionEvent.requestPermission)
-    DeviceMotionEvent.requestPermission()
-    document.body.onclick = null
+
+  let requestButton
+  if (window.DeviceMotionEvent && window.DeviceMotionEvent.requestPermission) {
+    requestButton = document.createElement('button')
+    requestButton.textContent = 'gravity'
+    requestButton.style.cssText = `
+      position: fixed;
+      cursor: pointer;
+      right: 10px;
+      bottom: 10px;
+      border-radius: 2px;
+      background: white;
+      opacity: 0.5;
+      font-size: 12px;
+      padding: 8px 16px;
+    `
+    document.body.appendChild(requestButton)
+    document.body.onclick = () => {
+      requestButton.remove()
+      requestButton = null
+      DeviceMotionEvent.requestPermission()
+    }
   }
   window.addEventListener('devicemotion', e => {
+    if (requestButton) requestButton.remove()
     const { x, y, z } = e.accelerationIncludingGravity
     const r = Math.hypot(x, y, z)
     const scale = 0.01 * (r > 10 ? 10 / r : 1)
