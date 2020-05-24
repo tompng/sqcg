@@ -132,16 +132,66 @@ function start() {
   directionalLight.shadow.mapSize.width = directionalLight.shadow.mapSize.height = 2048;
   directionalLight.position.set(2,1,3)
   scene.add(directionalLight)
-  document.addEventListener('click', () => {
-    if (squids.length < 3) {
-      addSquid()
-    } else {
-      const sq = squids.shift()
-      sq.meshGroup
-      squids.push(sq)
-      sq.countdown = 20
+  let target = null
+  function pointerPos(e) {
+    const dom = renderer.domElement
+    const sx = 2 * (e.pageX - dom.offsetLeft) / dom.offsetWidth - 1
+    const sy = 1 - 2 * (e.pageY - dom.offsetTop) / dom.offsetHeight
+    const cz = camera.position.z
+    const v = { x: sx, y: sy, z: -1 / Math.tan(Math.PI / 180 * camera.fov / 2) }
+    return { cz, v }
+  }
+  function calcDestination(cz, v) {
+    const z = 1.5
+    const t = (z - cz) / v.z
+    return { x: v.x * t, y: v.y * t, z: cz + v.z * t }
+  }
+  function down(e) {
+    const { cz, v } = pointerPos(e)
+    const vv = v.x ** 2 + v.y ** 2 + v.z ** 2
+    let hit = { tmin: Infinity, sphere: null }
+    squids.forEach(sq => {
+      sq.spheres.forEach((sphere) => {
+        const { x, y, z, r } = sphere
+        const vs = -v.x * x - v.y * y + v.z * (cz - z)
+        const ss = x ** 2 + y ** 2 + (cz - z) ** 2
+        const t = -vs / vv
+        const dist2 = vv * t * t + 2 * vs * t + ss
+        if (dist2 < r ** 2 && t < hit.tmin) {
+          hit.tmin = t
+          hit.squid = sq
+          hit.sphere = sphere
+        }
+      })
+    })
+    if (hit.sphere) {
+      target = {
+        squid: hit.squid,
+        sphere: hit.sphere,
+        destination: calcDestination(cz, v)
+      }
     }
+  }
+  function move(e) {
+    const { cz, v } = pointerPos(e)
+    if (target) target.destination = calcDestination(cz, v)
+  }
+  function up(e) {
+    target = null
+  }
+  document.addEventListener('mousedown', e => {
+    e.preventDefault()
+    down(e)
   })
+  document.addEventListener('mousemove', move)
+  document.addEventListener('mouseup', up)
+  window.addEventListener('touchstart', e => {
+    e.preventDefault()
+    down(e.touches[0])
+  }, { passive: false })
+  window.addEventListener('touchmove', e => move(e.touches[0]))
+  window.addEventListener('touchup', up)
+
   let running = true
   let wasd = { w: false, a: false, s: false, d: false }
   function keychanged(code, flag) {
@@ -159,6 +209,20 @@ function start() {
   function update(dt) {
     squids.forEach(s => s.resetSphereForce())
     squids.forEach(s => !s.countdown && s.hitFloor())
+    if (target) {
+      const dx = target.destination.x - target.sphere.x
+      const dy = target.destination.y - target.sphere.y
+      const dz = target.destination.z - target.sphere.z
+      const r = Math.hypot(dx, dy, dz)
+      target.sphere.fx += dx / 2
+      target.sphere.fy += dy / 2
+      target.sphere.fz += dz / 2
+      target.squid.spheres.forEach(s => {
+        s.fx += dx / target.squid.spheres.length * 4
+        s.fy += dy / target.squid.spheres.length * 4
+        s.fz += dz / target.squid.spheres.length * 4
+      })
+    }
     const t0 = performance.now()
     squids.forEach(s => s.calcHitMap())
     const t1 = performance.now()
