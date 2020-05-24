@@ -196,7 +196,7 @@ window.addEventListener('load', () => {
     requestAnimationFrame(animate)
   }
   animate()
-  document.body.onclick = () => {
+  document.body.ontouchstart = () => {
     if (DeviceMotionEvent.requestPermission)
     DeviceMotionEvent.requestPermission()
     document.body.onClick = null
