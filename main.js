@@ -217,18 +217,18 @@ function start() {
   function up(e) {
     target = null
   }
-  document.addEventListener('mousedown', e => {
+  renderer.domElement.addEventListener('mousedown', e => {
     e.preventDefault()
     down(e)
   })
   document.addEventListener('mousemove', move)
   document.addEventListener('mouseup', up)
-  window.addEventListener('touchstart', e => {
+  renderer.domElement.addEventListener('touchstart', e => {
     e.preventDefault()
     down(e.touches[0])
   }, { passive: false })
-  window.addEventListener('touchmove', e => move(e.touches[0]))
-  window.addEventListener('touchend', up)
+  document.addEventListener('touchmove', e => move(e.touches[0]))
+  document.addEventListener('touchend', up)
 
   let running = true
   let wasd = { w: false, a: false, s: false, d: false }
@@ -323,11 +323,11 @@ function start() {
       border-radius: 2px;
       background: white;
       opacity: 0.5;
-      font-size: 12px;
-      padding: 8px 16px;
+      font-size: 32px;
+      padding: 0.5em 1.5em;
     `
     document.body.appendChild(requestButton)
-    document.body.onclick = () => {
+    requestButton.onclick = () => {
       requestButton.remove()
       requestButton = null
       DeviceMotionEvent.requestPermission()
