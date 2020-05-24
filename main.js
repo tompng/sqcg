@@ -74,6 +74,8 @@ function start() {
   let wsize = 3
   let hsize = 3
   resize = () => {
+    const currentSize = renderer.getSize()
+    if (camera && currentSize.width === innerWidth && currentSize.height === innerHeight) return
     renderer.setSize(innerWidth, innerHeight)
     if (innerWidth > innerHeight) {
       camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 100)
@@ -87,7 +89,6 @@ function start() {
     hsize = 3 * innerHeight / vmin
   }
   resize()
-  window.addEventListener('resize', resize)
   renderer.setPixelRatio(window.devicePixelRatio)
   const scene = new THREE.Scene()
 
@@ -164,14 +165,18 @@ function start() {
   renderer.shadowMapType = THREE.PCFSoftShadowMap
   directionalLight.shadow.mapSize.width = directionalLight.shadow.mapSize.height = 2048;
   directionalLight.position.set(2,1,3)
+  directionalLight.shadow.camera.left = -7.5
+  directionalLight.shadow.camera.right = 7.5
+  directionalLight.shadow.camera.top = 7.5
+  directionalLight.shadow.camera.bottom = -7.5
   scene.add(directionalLight)
   let target = null
   function pointerPos(e) {
     const dom = renderer.domElement
-    const sx = (2 * (e.pageX - dom.offsetLeft) / dom.offsetWidth - 1) * wsize
-    const sy = (1 - 2 * (e.pageY - dom.offsetTop) / dom.offsetHeight) * hsize
+    const sx = (2 * (e.pageX - dom.offsetLeft) / dom.offsetWidth - 1) * wsize / hsize
+    const sy = (1 - 2 * (e.pageY - dom.offsetTop) / dom.offsetHeight)
     const cz = camera.position.z
-    const v = { x: sx, y: sy, z: -cz }//-1 / Math.tan(Math.PI / 180 * camera.fov / 2) }
+    const v = { x: sx, y: sy, z: -1 / Math.tan(Math.PI / 180 * camera.fov / 2) }
     return { cz, v }
   }
   function calcDestination(cz, v) {
@@ -277,6 +282,7 @@ function start() {
   }
   let cnt = 0
   function animate() {
+    resize()
     walls[1].position.x = -wsize
     walls[3].position.x = wsize
     walls[0].position.y = hsize

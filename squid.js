@@ -409,27 +409,29 @@ class Squid {
   }
   hitFloor(wsize = 3, hsize = 3) {
     const zrange = 3
+    const clampMax = 0.1
+    const clamp = v => v < -clampMax ? -clampMax : v > clampMax ? clampMax : v
     this.spheres.forEach(s => {
       if (s.z < s.r) {
-        s.fz += (s.r - s.z) + (s.vz < 0 ? -2.5 * s.vz : 0)
+        s.fz += clamp(s.r - s.z) + (s.vz < 0 ? -2.5 * s.vz : 0)
         // s.fx += -0.25 * s.vx
         // s.fy += -0.25 * s.vy
       }
       if (s.z > zrange - s.r) {
         const t = zrange - s.r
-        s.fz += (t - s.z) + (s.vz > 0 ? -2.5 * s.vz : 0)
+        s.fz += clamp(t - s.z) + (s.vz > 0 ? -2.5 * s.vz : 0)
         // s.fx += -0.25 * s.vx
         // s.fy += -0.25 * s.vy
       }
       if (s.x < -wsize + s.r || s.x > wsize - s.r) {
         const t = s.x < 0 ? -wsize + s.r : wsize - s.r
-        s.fx += (t - s.x) + (s.x > 0 ^ s.vx > 0 ? 0 : -2.5 * s.vx)
+        s.fx += clamp(t - s.x) + (s.x > 0 ^ s.vx > 0 ? 0 : -2.5 * s.vx)
         // s.fz += -0.25 * s.vz
         // s.fy += -0.25 * s.vy
       }
       if (s.y < -hsize + s.r || s.y > hsize - s.r) {
         const t = s.y < 0 ? -hsize + s.r : hsize - s.r
-        s.fy += (t - s.y) + (s.y > 0 ^ s.vy > 0 ? 0 : -2.5 * s.vy)
+        s.fy += clamp(t - s.y) + (s.y > 0 ^ s.vy > 0 ? 0 : -2.5 * s.vy)
         // s.fz += -0.25 * s.vz
         // s.fx += -0.25 * s.vx
       }
