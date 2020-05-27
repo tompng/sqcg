@@ -4,3 +4,48 @@
 <script src="shader.js"></script>
 <script src="squid.js"></script>
 <script src="main.js"></script>
+<style>
+  .button {
+    position: fixed;
+    cursor: pointer;
+    right: 10px;
+    top: 10px;
+    border-radius: 4px;
+    text-align: center;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    opacity: 0.8;
+    font-size: 24px;
+    padding: 0.5em 0.75em;
+    color: #222;
+  }
+  .button .switch {
+    display: inline-block;
+    width: 80px;
+    height: 36px;
+    border-radius: 18px;
+    background: silver;
+    position: relative;
+    box-sizing: border-box;
+    margin-top: 4px;
+  }
+  .button .switch:before {
+    content: '';
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    left: 4px;
+    top: 4px;
+    border-radius: 50%;
+    background: gray;
+  }
+  .button.on .switch:before {
+    left: auto;
+    right: 4px;
+    background: rgba(128, 255, 128, 0.5);
+  }
+  .button.on .switch {
+    background: rgba(128, 255, 128, 0.2);
+  }
+</style>

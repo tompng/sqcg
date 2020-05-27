@@ -400,7 +400,7 @@ class Squid {
       p.z += p.vz * dt
       p.vx += p.fx * dt + (window.gx||0) * dt
       p.vy += p.fy * dt + (window.gy||0) * dt
-      p.vz += p.fz * dt + (window.gz||-0.1) * dt
+      p.vz += p.fz * dt + (window.gz||0) * dt
     })
     this.eachCoord((i, j, k) => {
       const p = this.jelly[i][j][k]

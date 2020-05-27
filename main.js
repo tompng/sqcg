@@ -1,3 +1,5 @@
+window.gx = window.gy = 0
+window.gz = -0.1
 onload = () => {
   const canvas = document.createElement('canvas')
   const size = 1024
@@ -311,35 +313,48 @@ function start() {
   }
   animate()
 
-  let requestButton
-  if (window.DeviceMotionEvent && window.DeviceMotionEvent.requestPermission) {
-    requestButton = document.createElement('button')
-    requestButton.textContent = 'gravity'
-    requestButton.style.cssText = `
-      position: fixed;
-      cursor: pointer;
-      right: 10px;
-      bottom: 10px;
-      border-radius: 2px;
-      background: white;
-      opacity: 0.5;
-      font-size: 32px;
-      padding: 0.5em 1.5em;
-    `
-    document.body.appendChild(requestButton)
-    requestButton.onclick = () => {
-      requestButton.remove()
-      requestButton = null
-      DeviceMotionEvent.requestPermission()
+  const gravityButton = document.createElement('a')
+  gravityButton.className = 'button'
+  gravityButton.innerHTML = '<div>gravity</div><span class="switch"></span>'
+  gravityButton.style.display = 'none'
+  document.body.appendChild(gravityButton)
+  let gravityEnabled = false
+  let gravityDetected = false
+  function toggleGravity() {
+    gravityEnabled = !gravityEnabled
+    if (gravityEnabled) {
+      gravityButton.classList.add('on')
+    } else {
+      gravityButton.classList.remove('on')
+      gx = 0
+      gy = 0
+      gz = -0.1
     }
   }
+  let needsPermission = window.DeviceMotionEvent && window.DeviceMotionEvent.requestPermission
+  if (needsPermission) gravityButton.style.display = ''
+  gravityButton.onclick = () => {
+    if (needsPermission) {
+      DeviceMotionEvent.requestPermission()
+      needsPermission = false
+      gravityButton.style.display = 'none'
+    }
+    toggleGravity()
+  }
   window.addEventListener('devicemotion', e => {
-    if (requestButton) requestButton.remove()
+    gravityButton.style.display = ''
+    gravityDetected = true
+    needsPermission = false
+    if (!gravityEnabled) return
     const { x, y, z } = e.accelerationIncludingGravity
     const r = Math.hypot(x, y, z)
     const scale = 0.01 * (r > 10 ? 10 / r : 1)
-    window.gx = x * scale
-    window.gy = y * scale
+    const orientation = typeof window.orientation === 'number' ? window.orientation : (window.screen && window.screen.orientation && window.screen.orientation.angle) || 0
+    const th = Math.PI * orientation / 180
+    const cos = Math.cos(th)
+    const sin = Math.sin(th)
+    window.gx = scale * (x * cos - y * sin)
+    window.gy = scale * (x * sin + y * cos)
     window.gz = z * scale
   })
 }
