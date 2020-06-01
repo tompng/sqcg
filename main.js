@@ -110,7 +110,13 @@ function start() {
     texture.needsUpdate = true
     return texture
   }
-  const colors = ['#F4A', '#CF4', '#F62', '#24F', '#4FD', '#E4F', '#FD3', '#FFF']
+  const colors = ['#F4A', '#CF4', '#F62', '#24F', '#4FD', '#E4F', '#FD3']
+  for (let i = 0; i < colors.length; i++) {
+    const j = i + Math.floor(colors.length * Math.random() - i)
+    const [ci, cj] = [colors[i], colors[j]]
+    colors[i] = cj
+    colors[j] = ci
+  }
   const texture = createSquidTexture()
   const squids = []
   function addSquid(i) {
