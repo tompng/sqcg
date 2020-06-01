@@ -173,10 +173,12 @@ class Squid {
     this.color = new THREE.Color(color)
     this.initializeMesh(sections, option)
     this.initializeJelly()
-    this.randomJelly(0)
+    // this.randomJelly(0)
     this.eachCoord((i, j, k) => {
       const p = this.jelly[i][j][k]
       p.fx = p.fy = p.fz = 0
+      p.vx = -p.y*0.3
+      p.vy = p.x*0.3
     })
   }
   initializeMesh(sections, option = {}) {
@@ -330,28 +332,65 @@ class Squid {
     this.spheres.forEach(s => { s.fx = s.fy = s.fz = 0 })
   }
   updateJelly(dt) {
-    this.eachCoord((ia,ja,ka) => {
-      this.eachCoord((ib,jb,kb) => {
-        const pa = this.jelly[ia][ja][ka]
-        const pb = this.jelly[ib][jb][kb]
-        if (pa === pb) return
-        const l0 = Math.sqrt((this.xysize*(ia-ib))**2 + (this.xysize*(ja-jb))**2 + (this.zsize*(ka-kb))**2)
-        const dx = pb.x - pa.x
-        const dy = pb.y - pa.y
-        const dz = pb.z - pa.z
-        const l = Math.sqrt(dx**2 + dy**2 + dz**2)
-        const dotv = (pb.vx - pa.vx) * dx + (pb.vy - pa.vy) * dy + (pb.vz - pa.vz) * dz
-        const fx = ((l - l0) * dx / l + dotv * dx / l) / l0 / numSections / numSections
-        const fy = ((l - l0) * dy / l + dotv * dy / l) / l0 / numSections / numSections
-        const fz = ((l - l0) * dz / l + dotv * dz / l) / l0 / numSections / numSections
-        pa.fx += fx
-        pa.fy += fy
-        pa.fz += fz
-        pb.fx -= fx
-        pb.fy -= fy
-        pb.fz -= fz
+    const clearF = () => {
+      this.eachCoord((i, j, k) => {
+        const p = this.jelly[i][j][k]
+        p.fx = p.fy = p.fz = 0
       })
+    }
+    const setJF = () => {
+      clearF()
+      this.eachCoord((ia,ja,ka) => {
+        const pa = this.jelly[ia][ja][ka]
+        this.eachCoord((ib,jb,kb) => {
+          const pb = this.jelly[ib][jb][kb]
+          if (pa === pb) return
+          const l0 = Math.sqrt((this.xysize*(ia-ib))**2 + (this.xysize*(ja-jb))**2 + (this.zsize*(ka-kb))**2)
+          const dx = pb.x - pa.x
+          const dy = pb.y - pa.y
+          const dz = pb.z - pa.z
+          const l = Math.sqrt(dx**2 + dy**2 + dz**2)
+          const dotv = (pb.vx - pa.vx) * dx + (pb.vy - pa.vy) * dy + (pb.vz - pa.vz) * dz
+          const fx = ((l - l0) * dx / l + dotv * dx / l) / l0 / numSections / numSections
+          const fy = ((l - l0) * dy / l + dotv * dy / l) / l0 / numSections / numSections
+          const fz = ((l - l0) * dz / l + dotv * dz / l) / l0 / numSections / numSections
+          pa.fx += fx
+          pa.fy += fy
+          pa.fz += fz
+          pb.fx -= fx
+          pb.fy -= fy
+          pb.fz -= fz
+        })
+      })
+    }
+    setJF()
+    this.eachCoord((i, j, k) => {
+      const p = this.jelly[i][j][k]
+      p.x0 = p.x
+      p.y0 = p.y
+      p.z0 = p.z
+      p.vx0 = p.vx
+      p.vy0 = p.vy
+      p.vz0 = p.vz
+      p.x += p.vx * dt / 2
+      p.y += p.vy * dt / 2
+      p.z += p.vz * dt / 2
+      p.vx += p.fx * dt + (window.gx||0) * dt / 2
+      p.vy += p.fy * dt + (window.gy||0) * dt / 2
+      p.vz += p.fz * dt + (window.gz||0) * dt / 2
     })
+    setJF()
+    this.eachCoord((i, j, k) => {
+      const p = this.jelly[i][j][k]
+      p.x = p.x0 + p.vx * dt
+      p.y = p.y0 + p.vy * dt
+      p.z = p.z0 + p.vz * dt
+      p.vx = p.vx0 + p.fx * dt + (window.gx||0) * dt
+      p.vy = p.vy0 + p.fy * dt + (window.gy||0) * dt
+      p.vz = p.vz0 + p.fz * dt + (window.gz||0) * dt
+      p.fx = p.fy = p.fz = 0
+    })
+    clearF()
     this.spheres.forEach(s => {
       const bx = s.base.x
       const by = s.base.y
@@ -395,15 +434,9 @@ class Squid {
     })
     this.eachCoord((i, j, k) => {
       const p = this.jelly[i][j][k]
-      p.x += p.vx * dt
-      p.y += p.vy * dt
-      p.z += p.vz * dt
-      p.vx += p.fx * dt + (window.gx||0) * dt
-      p.vy += p.fy * dt + (window.gy||0) * dt
-      p.vz += p.fz * dt + (window.gz||0) * dt
-    })
-    this.eachCoord((i, j, k) => {
-      const p = this.jelly[i][j][k]
+      p.vx += p.fx * dt
+      p.vy += p.fy * dt
+      p.vz += p.fz * dt
       p.fx = p.fy = p.fz = 0
     })
   }
